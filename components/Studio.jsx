@@ -19,7 +19,7 @@ export default function Studio() {
     let currentWidth = 720;
     let currentHeight = 720;
     let previousResValue = "720x720";
-    let currentPresetTitle = "Flow Field";
+    let currentPresetTitle = "Basic Shapes";
     let abortController = null;
 
     // Referencias del DOM
@@ -234,7 +234,7 @@ export default function Studio() {
         matchBrackets: true,
       });
 
-      editor.setValue(EXAMPLES["flow-field"] || "");
+      editor.setValue(EXAMPLES["basic-shapes"] || EXAMPLES["flow-field"] || "");
 
       editor.setOption("extraKeys", {
         "Ctrl-Enter": () => runUserCode(),
@@ -595,7 +595,7 @@ export default function Studio() {
             <div className="pane-header-title">
               <span>JS Code Editor (PixiJS v8)</span>
               <span id="active-preset-badge" className="active-preset-badge">
-                Flow Field
+                Basic Shapes
               </span>
             </div>
             <button

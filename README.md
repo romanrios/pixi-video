@@ -8,7 +8,7 @@ Pixi Video is a web-based creative coding playground and MP4 recorder built with
 - Deterministic MP4 Export: Render animations frame-by-frame using WebCodecs and MP4 multiplexing, guaranteeing zero frame drops and smooth playback regardless of system performance.
 - Flexible Resolutions: Choose from common aspect ratios (1:1 square, 16:9 landscape, 9:16 portrait) or define custom pixel dimensions.
 - Customizable Export Settings: Configure video duration, frame rates (24, 30, 60 FPS), and encoder bitrates.
-- Preset Library: Browse and load built-in generative presets (Flow Field, Sacred Geometry, 3D Synthwave Tunnel, Harmonic Waves).
+- Preset Library: Browse and load built-in presets covering PixiJS v8 fundamentals (Basic Shapes, Motion & Transforms, Bouncing Balls, Containers & Hierarchy) and advanced generative effects (Flow Field, Sacred Geometry, 3D Synthwave Tunnel, Harmonic Waves).
 - User Accounts & Community Presets: Sign in with Google to publish, edit, and manage your own custom animation presets stored in a cloud database.
 
 ## Tech Stack
