@@ -1,11 +1,8 @@
-import flowField from "./presets/flow-field.js?raw";
-import sacredGeometry from "./presets/sacred-geometry.js?raw";
-import cyberGrid from "./presets/cyber-grid.js?raw";
-import audioWaves from "./presets/audio-waves.js?raw";
+import { PRESETS_DATA } from "../lib/presets-data.js";
 
 export const EXAMPLES = {
-  "flow-field": flowField,
-  "sacred-geometry": sacredGeometry,
-  "cyber-grid": cyberGrid,
-  "audio-waves": audioWaves,
+  "flow-field": PRESETS_DATA.find((p) => p.id === "flow-field-preset")?.code || "",
+  "sacred-geometry": PRESETS_DATA.find((p) => p.id === "sacred-geometry-preset")?.code || "",
+  "cyber-grid": PRESETS_DATA.find((p) => p.id === "cyber-grid-preset")?.code || "",
+  "audio-waves": PRESETS_DATA.find((p) => p.id === "audio-waves-preset")?.code || "",
 };

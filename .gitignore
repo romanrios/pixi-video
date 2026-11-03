@@ -6,6 +6,8 @@ node_modules/
 # Build de producción y caché
 dist/
 dist-ssr/
+.next/
+out/
 *.local
 
 # Logs

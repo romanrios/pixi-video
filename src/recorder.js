@@ -3,15 +3,13 @@ import {
   Mp4OutputFormat,
   BufferTarget,
   CanvasSource,
-  QUALITY_VERY_HIGH,
-  QUALITY_HIGH,
-  QUALITY_MEDIUM,
+  Quality,
 } from "mediabunny";
 
 const QUALITY_MAP = {
-  "very-high": QUALITY_VERY_HIGH,
-  high: QUALITY_HIGH,
-  medium: QUALITY_MEDIUM,
+  "very-high": new Quality("very-high"),
+  high: new Quality("high"),
+  medium: new Quality("medium"),
 };
 
 /**
@@ -65,7 +63,7 @@ export async function exportDeterministicVideo({
     format,
   });
 
-  const selectedQuality = QUALITY_MAP[quality] || QUALITY_VERY_HIGH;
+  const selectedQuality = QUALITY_MAP[quality] || QUALITY_MAP["very-high"];
 
   // 3. Crear CanvasSource usando WebCodecs H.264 / AVC
   const canvasSource = new CanvasSource(canvas, {

@@ -1,6 +1,8 @@
 import * as PIXI from "pixi.js";
 import { EXAMPLES } from "./examples.js";
 import { exportDeterministicVideo, downloadBlob } from "./recorder.js";
+import { initAuth } from "./auth-ui.js";
+import { initLibraryUI } from "./library-ui.js";
 
 // Exponer PIXI globalmente para que el código del editor pueda acceder sin imports
 window.PIXI = PIXI;
@@ -350,6 +352,15 @@ async function main() {
   initEditor();
   setupEventListeners();
   updateExportSummary();
+  initAuth();
+  initLibraryUI({
+    onSelectPreset: (preset) => {
+      editor.setValue(preset.code);
+      runUserCode();
+      logMessage(`Preset "${preset.title}" cargado desde la biblioteca.`, "info");
+    },
+    getEditorCode: () => (editor ? editor.getValue() : ""),
+  });
   await runUserCode();
 }
 
