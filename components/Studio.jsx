@@ -18,13 +18,12 @@ export default function Studio() {
     let editor = null;
     let currentWidth = 720;
     let currentHeight = 720;
+    let currentPresetTitle = "Campo de Flujo";
     let abortController = null;
 
     // Referencias del DOM
     const canvasContainer = document.getElementById("canvas-container");
-    const examplesSelect = document.getElementById("examples-select");
     const btnRun = document.getElementById("btn-run");
-    const btnReset = document.getElementById("btn-reset");
     const btnOpenRecordModal = document.getElementById("btn-open-record-modal");
     const consoleLogs = document.getElementById("console-logs");
     const fpsCounter = document.getElementById("fps-counter");
@@ -91,8 +90,11 @@ export default function Studio() {
       summaryFrames.textContent = `${totalFrames} frames`;
       summaryRes.textContent = `${width} x ${height}`;
 
-      const presetName = examplesSelect?.value || "animacion";
-      const suggestedName = `pixi-${presetName}-${width}x${height}.mp4`;
+      const presetSlug = (currentPresetTitle || "animacion")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const suggestedName = `pixi-${presetSlug}-${width}x${height}.mp4`;
       if (modalExportFilename) {
         modalExportFilename.placeholder = suggestedName;
       }
@@ -170,7 +172,11 @@ export default function Studio() {
       const fps = parseInt(modalExportFps?.value || "60", 10) || 60;
       const quality = modalExportQuality?.value || "very-high";
       const customName = modalExportFilename?.value.trim() || "";
-      const filename = customName || `pixi-${examplesSelect?.value || "animacion"}-${width}x${height}.mp4`;
+      const presetSlug = (currentPresetTitle || "animacion")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const filename = customName || `pixi-${presetSlug}-${width}x${height}.mp4`;
 
       if (recordModal) recordModal.close();
       if (progressModal) progressModal.showModal();
@@ -243,23 +249,6 @@ export default function Studio() {
 
     function setupEventListeners() {
       btnRun?.addEventListener("click", () => runUserCode());
-
-      btnReset?.addEventListener("click", () => {
-        const selected = examplesSelect?.value;
-        if (selected && EXAMPLES[selected] && editor) {
-          editor.setValue(EXAMPLES[selected]);
-          runUserCode();
-        }
-      });
-
-      examplesSelect?.addEventListener("change", (e) => {
-        const selected = e.target.value;
-        if (selected && EXAMPLES[selected] && editor) {
-          editor.setValue(EXAMPLES[selected]);
-          runUserCode();
-          updateExportSummary();
-        }
-      });
 
       btnOpenRecordModal?.addEventListener("click", () => {
         updateExportSummary();
@@ -336,8 +325,14 @@ export default function Studio() {
     initLibraryUI({
       onSelectPreset: (preset) => {
         if (editor) {
+          currentPresetTitle = preset.title;
           editor.setValue(preset.code);
           runUserCode();
+          updateExportSummary();
+          const badge = document.getElementById("active-preset-badge");
+          if (badge) {
+            badge.textContent = preset.title;
+          }
           logMessage(`Preset "${preset.title}" cargado desde la biblioteca.`, "info");
         }
       },
@@ -379,16 +374,6 @@ export default function Studio() {
         </div>
 
         <div className="controls">
-          <div className="control-group">
-            <label htmlFor="examples-select">Preset:</label>
-            <select id="examples-select" defaultValue="flow-field">
-              <option value="flow-field">Campo de Flujo (Generativo)</option>
-              <option value="sacred-geometry">Geometría Sagrada & Mandalas</option>
-              <option value="cyber-grid">Túnel Synthwave 3D</option>
-              <option value="audio-waves">Ondas Armónicas</option>
-            </select>
-          </div>
-
           <button
             id="btn-open-library"
             className="btn btn-secondary"
@@ -416,20 +401,13 @@ export default function Studio() {
             <span>Publicar</span>
           </button>
 
+          <div className="control-divider"></div>
+
           <button id="btn-run" className="btn btn-primary" title="Ctrl + Enter para ejecutar código">
             <svg className="btn-icon" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
             <span>Ejecutar</span>
-          </button>
-
-          <button id="btn-reset" className="btn btn-secondary" title="Restablecer código del preset actual">
-            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="23 4 23 10 17 10"></polyline>
-              <polyline points="1 20 1 14 7 14"></polyline>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
-            <span>Reset</span>
           </button>
 
           <div className="control-divider"></div>
@@ -455,7 +433,12 @@ export default function Studio() {
       <main className="playground-body">
         <section className="editor-pane">
           <div className="pane-header">
-            <span>Editor de Código JS (PixiJS v8)</span>
+            <div className="pane-header-title">
+              <span>Editor de Código JS (PixiJS v8)</span>
+              <span id="active-preset-badge" className="active-preset-badge">
+                Campo de Flujo
+              </span>
+            </div>
             <span className="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> para ejecutar</span>
           </div>
           <div className="editor-wrapper">

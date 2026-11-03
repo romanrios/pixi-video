@@ -203,6 +203,24 @@ button, input, select, textarea {
   user-select: none;
 }
 
+.pane-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.active-preset-badge {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  font-size: 0.72rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+}
+
 .status-tags {
   display: flex;
   gap: 8px;
