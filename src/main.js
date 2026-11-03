@@ -2,35 +2,48 @@ import * as PIXI from "pixi.js";
 import { EXAMPLES } from "./examples.js";
 import { exportDeterministicVideo, downloadBlob } from "./recorder.js";
 
-// Exponer PIXI globalmente para que el código del usuario pueda acceder sin imports
+// Exponer PIXI globalmente para que el código del editor pueda acceder sin imports
 window.PIXI = PIXI;
 
 let app = null;
 let editor = null;
+let currentWidth = 720;
+let currentHeight = 720;
+let abortController = null;
 
-// Referencias del DOM
+// Elementos de la interfaz principal
 const canvasContainer = document.getElementById("canvas-container");
 const examplesSelect = document.getElementById("examples-select");
-const exportDuration = document.getElementById("export-duration");
-const exportFps = document.getElementById("export-fps");
-const exportRes = document.getElementById("export-res");
-const btnExportVideo = document.getElementById("btn-export-video");
 const btnRun = document.getElementById("btn-run");
 const btnReset = document.getElementById("btn-reset");
+const btnOpenRecordModal = document.getElementById("btn-open-record-modal");
 const consoleLogs = document.getElementById("console-logs");
 const fpsCounter = document.getElementById("fps-counter");
 const canvasDimBadge = document.getElementById("canvas-dim-badge");
 
-// Referencias del Modal
-const exportModal = document.getElementById("export-modal");
+// Elementos del Modal de Configuración
+const recordModal = document.getElementById("record-modal");
+const btnCloseRecordModal = document.getElementById("btn-close-record-modal");
+const btnCancelRecord = document.getElementById("btn-cancel-record");
+const recordForm = document.getElementById("record-form");
+const modalExportRes = document.getElementById("modal-export-res");
+const customResRow = document.getElementById("custom-res-row");
+const customWidthInput = document.getElementById("custom-width");
+const customHeightInput = document.getElementById("custom-height");
+const modalExportDuration = document.getElementById("modal-export-duration");
+const durationPills = document.getElementById("duration-pills");
+const modalExportFps = document.getElementById("modal-export-fps");
+const modalExportQuality = document.getElementById("modal-export-quality");
+const modalExportFilename = document.getElementById("modal-export-filename");
+const summaryFrames = document.getElementById("summary-frames");
+const summaryRes = document.getElementById("summary-res");
+
+// Elementos del Modal de Progreso
+const progressModal = document.getElementById("progress-modal");
 const exportProgressBar = document.getElementById("export-progress-bar");
 const exportProgressText = document.getElementById("export-progress-text");
 const exportProgressPercent = document.getElementById("export-progress-percent");
-
-function parseResolution(resStr) {
-  const [w, h] = resStr.split("x").map(Number);
-  return { width: w || 720, height: h || 720 };
-}
+const btnAbortExport = document.getElementById("btn-abort-export");
 
 // Logging en la consola interna
 function logMessage(msg, type = "info") {
@@ -46,8 +59,44 @@ function clearLogs() {
   consoleLogs.innerHTML = "";
 }
 
-// Inicializar la aplicación PixiJS v8
-async function initPixiApp() {
+/**
+ * Obtiene la resolución seleccionada en el modal (preset o custom).
+ */
+function getSelectedResolution() {
+  if (modalExportRes.value === "custom") {
+    let w = parseInt(customWidthInput.value, 10) || 1080;
+    let h = parseInt(customHeightInput.value, 10) || 1080;
+    // Asegurar números pares para compatibilidad H.264
+    if (w % 2 !== 0) w += 1;
+    if (h % 2 !== 0) h += 1;
+    return { width: w, height: h };
+  }
+
+  const [w, h] = modalExportRes.value.split("x").map(Number);
+  return { width: w || 720, height: h || 720 };
+}
+
+/**
+ * Actualiza el resumen dinámico de exportación y el nombre de archivo sugerido.
+ */
+function updateExportSummary() {
+  const { width, height } = getSelectedResolution();
+  const duration = parseFloat(modalExportDuration.value) || 5;
+  const fps = parseInt(modalExportFps.value, 10) || 60;
+  const totalFrames = Math.max(1, Math.round(duration * fps));
+
+  summaryFrames.textContent = `${totalFrames} frames`;
+  summaryRes.textContent = `${width} x ${height}`;
+
+  const presetName = examplesSelect.value || "animacion";
+  const suggestedName = `pixi-${presetName}-${width}x${height}.mp4`;
+  modalExportFilename.placeholder = suggestedName;
+}
+
+/**
+ * Inicializar la aplicación PixiJS v8 con dimensiones dadas.
+ */
+async function initPixiApp(width = currentWidth, height = currentHeight) {
   if (app) {
     try {
       app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });
@@ -56,19 +105,20 @@ async function initPixiApp() {
     }
   }
 
-  const { width, height } = parseResolution(exportRes.value);
+  currentWidth = width;
+  currentHeight = height;
   canvasDimBadge.textContent = `${width}x${height}`;
 
   app = new PIXI.Application();
 
-  // PixiJS v8: inicialización asíncrona y configuración WebGL/WebGPU
+  // PixiJS v8: inicialización asíncrona
   await app.init({
     width,
     height,
     background: "#080c14",
     antialias: true,
     autoDensity: true,
-    resolution: 1, // 1 para resolución nativa y precisa en exportación
+    resolution: 1,
     preference: "webgl",
   });
 
@@ -86,13 +136,15 @@ async function initPixiApp() {
   return app;
 }
 
-// Ejecutar el código del usuario en Pixi
-async function runUserCode() {
+/**
+ * Ejecutar el código del usuario en Pixi
+ */
+async function runUserCode(width = currentWidth, height = currentHeight) {
   clearLogs();
-  logMessage("Ejecutando código PixiJS v8...", "info");
+  logMessage(`Ejecutando código PixiJS v8 (${width}x${height})...`, "info");
 
   try {
-    await initPixiApp();
+    await initPixiApp(width, height);
 
     const userCode = editor.getValue();
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -112,27 +164,39 @@ async function runUserCode() {
   }
 }
 
-// Exportación de video determinista
-async function handleExportVideo() {
-  btnExportVideo.disabled = true;
-  exportModal.classList.remove("hidden");
+/**
+ * Iniciar la exportación de video con los parámetros confirmados en el modal.
+ */
+async function startVideoExport() {
+  const { width, height } = getSelectedResolution();
+  const durationSec = parseFloat(modalExportDuration.value) || 5;
+  const fps = parseInt(modalExportFps.value, 10) || 60;
+  const quality = modalExportQuality.value || "very-high";
+  const customName = modalExportFilename.value.trim();
+  const filename = customName || `pixi-${examplesSelect.value}-${width}x${height}.mp4`;
+
+  // Cerrar modal de configuración y abrir modal de progreso
+  recordModal.close();
+  progressModal.showModal();
+
   exportProgressBar.style.width = "0%";
   exportProgressPercent.textContent = "0%";
-  exportProgressText.textContent = "Preparando codificador MP4 / H.264...";
+  exportProgressText.textContent = "Preparando codificador AVC / H.264...";
+
+  abortController = new AbortController();
 
   try {
-    // 1. Reinicializar escena desde el inicio
-    await runUserCode();
+    // 1. Reiniciar la escena con las dimensiones de exportación
+    await runUserCode(width, height);
 
-    const durationSec = parseFloat(exportDuration.value) || 5;
-    const fps = parseInt(exportFps.value, 10) || 60;
-
-    logMessage(`Iniciando grabación: ${durationSec}s a ${fps} FPS (${app.canvas.width}x${app.canvas.height})...`, "info");
+    logMessage(`Iniciando grabación: ${durationSec}s a ${fps} FPS (${width}x${height})...`, "info");
 
     const blob = await exportDeterministicVideo({
       app,
       durationSec,
       fps,
+      quality,
+      signal: abortController.signal,
       onProgress: (current, total, percent) => {
         exportProgressBar.style.width = `${percent}%`;
         exportProgressPercent.textContent = `${percent}%`;
@@ -141,24 +205,29 @@ async function handleExportVideo() {
     });
 
     logMessage(`¡Video generado con éxito! Tamaño: ${(blob.size / (1024 * 1024)).toFixed(2)} MB`, "info");
-    const filename = `pixi-${examplesSelect.value}-${app.canvas.width}x${app.canvas.height}.mp4`;
-    downloadBlob(blob, filename);
+    downloadBlob(blob, filename.endsWith(".mp4") ? filename : `${filename}.mp4`);
 
-    exportProgressText.textContent = "¡Descarga iniciada!";
+    exportProgressText.textContent = "¡Descarga iniciada con éxito!";
     setTimeout(() => {
-      exportModal.classList.add("hidden");
+      progressModal.close();
     }, 1200);
   } catch (err) {
-    console.error(err);
-    alert(`Error exportando video: ${err.message}`);
-    logMessage(`Error en exportación: ${err.message}`, "error");
-    exportModal.classList.add("hidden");
+    if (err.name === "AbortError") {
+      logMessage("Grabación cancelada por el usuario.", "warn");
+    } else {
+      console.error(err);
+      alert(`Error exportando video: ${err.message}`);
+      logMessage(`Error en exportación: ${err.message}`, "error");
+    }
+    progressModal.close();
   } finally {
-    btnExportVideo.disabled = false;
+    abortController = null;
   }
 }
 
-// Inicializar Editor CodeMirror
+/**
+ * Inicializar el editor CodeMirror
+ */
 function initEditor() {
   const textarea = document.getElementById("code-editor");
   editor = CodeMirror.fromTextArea(textarea, {
@@ -178,8 +247,11 @@ function initEditor() {
   });
 }
 
-// Event Listeners
+/**
+ * Configurar eventos de la interfaz y del modal
+ */
 function setupEventListeners() {
+  // Botones de ejecución y reset
   btnRun.addEventListener("click", () => runUserCode());
 
   btnReset.addEventListener("click", () => {
@@ -195,22 +267,89 @@ function setupEventListeners() {
     if (EXAMPLES[selected]) {
       editor.setValue(EXAMPLES[selected]);
       runUserCode();
+      updateExportSummary();
     }
   });
 
-  exportRes.addEventListener("change", () => {
-    runUserCode();
+  // Abrir modal de configuración de grabación
+  btnOpenRecordModal.addEventListener("click", () => {
+    updateExportSummary();
+    recordModal.showModal();
   });
 
-  btnExportVideo.addEventListener("click", () => {
-    handleExportVideo();
+  // Cerrar modal de configuración
+  btnCloseRecordModal.addEventListener("click", () => recordModal.close());
+  btnCancelRecord.addEventListener("click", () => recordModal.close());
+
+  // Cancelar exportación activa
+  btnAbortExport.addEventListener("click", () => {
+    if (abortController) {
+      exportProgressText.textContent = "Cancelando grabación...";
+      abortController.abort();
+    }
   });
+
+  // Formulario del modal -> confirmar e iniciar grabación
+  recordForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    startVideoExport();
+  });
+
+  // Cambios en opciones de resolución
+  modalExportRes.addEventListener("change", () => {
+    if (modalExportRes.value === "custom") {
+      customResRow.classList.remove("hidden");
+    } else {
+      customResRow.classList.add("hidden");
+    }
+    updateExportSummary();
+  });
+
+  customWidthInput.addEventListener("input", updateExportSummary);
+  customHeightInput.addEventListener("input", updateExportSummary);
+  modalExportDuration.addEventListener("input", () => {
+    const val = parseFloat(modalExportDuration.value);
+    // Sincronizar pills activas
+    durationPills.querySelectorAll(".pill").forEach((pill) => {
+      pill.classList.toggle("active", parseFloat(pill.dataset.val) === val);
+    });
+    updateExportSummary();
+  });
+  modalExportFps.addEventListener("change", updateExportSummary);
+
+  // Botones rápidos (pills) de duración
+  durationPills.addEventListener("click", (e) => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    durationPills.querySelectorAll(".pill").forEach((p) => p.classList.remove("active"));
+    pill.classList.add("active");
+    modalExportDuration.value = pill.dataset.val;
+    updateExportSummary();
+  });
+
+  // Fallback de light-dismiss para navegadores sin closedby nativo
+  if (!("closedBy" in HTMLDialogElement.prototype)) {
+    const outside = (e, dialog) => {
+      const r = dialog.getBoundingClientRect();
+      return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    };
+    for (const dialog of document.querySelectorAll('dialog[closedby="any"]')) {
+      let pressedOutside = false;
+      dialog.addEventListener("pointerdown", (e) => {
+        pressedOutside = outside(e, dialog);
+      });
+      dialog.addEventListener("pointerup", (e) => {
+        if (pressedOutside && outside(e, dialog)) dialog.close();
+      });
+    }
+  }
 }
 
-// Inicio
+// Inicialización de la aplicación
 async function main() {
   initEditor();
   setupEventListeners();
+  updateExportSummary();
   await runUserCode();
 }
 

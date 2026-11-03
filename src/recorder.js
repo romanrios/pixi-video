@@ -1,4 +1,18 @@
-import { Output, Mp4OutputFormat, BufferTarget, CanvasSource, QUALITY_VERY_HIGH } from "mediabunny";
+import {
+  Output,
+  Mp4OutputFormat,
+  BufferTarget,
+  CanvasSource,
+  QUALITY_VERY_HIGH,
+  QUALITY_HIGH,
+  QUALITY_MEDIUM,
+} from "mediabunny";
+
+const QUALITY_MAP = {
+  "very-high": QUALITY_VERY_HIGH,
+  high: QUALITY_HIGH,
+  medium: QUALITY_MEDIUM,
+};
 
 /**
  * Graba la escena de Pixi de forma determinista cuadro a cuadro a una tasa de FPS fija.
@@ -7,7 +21,9 @@ import { Output, Mp4OutputFormat, BufferTarget, CanvasSource, QUALITY_VERY_HIGH 
  * @param {import('pixi.js').Application} options.app - Instancia de PixiJS v8
  * @param {number} options.durationSec - Duración en segundos del video
  * @param {number} options.fps - Cuadros por segundo (ej. 30 o 60)
- * @param {function} options.onProgress - Callback (currentFrame, totalFrames, percentage)
+ * @param {string} [options.quality] - Calidad ('very-high', 'high', 'medium')
+ * @param {AbortSignal} [options.signal] - Señal para abortar la grabación
+ * @param {function} [options.onProgress] - Callback (currentFrame, totalFrames, percentage)
  * @param {function} [options.onFrame] - Función opcional llamada en cada frame con (timeSec, frameIndex, ticker)
  * @returns {Promise<Blob>} Retorna el Blob MP4 generado
  */
@@ -15,6 +31,8 @@ export async function exportDeterministicVideo({
   app,
   durationSec = 5,
   fps = 60,
+  quality = "very-high",
+  signal = null,
   onProgress = () => {},
   onFrame = null,
 }) {
@@ -24,10 +42,12 @@ export async function exportDeterministicVideo({
 
   // Asegurar dimensiones pares para H.264
   if (width % 2 !== 0 || height % 2 !== 0) {
-    throw new Error(`Las dimensiones del canvas deben ser pares para codificar en MP4/H264 (${width}x${height}).`);
+    throw new Error(
+      `Las dimensiones del canvas deben ser pares para codificar en MP4/H264 (${width}x${height}). Ajusta la resolución.`
+    );
   }
 
-  const totalFrames = Math.round(durationSec * fps);
+  const totalFrames = Math.max(1, Math.round(durationSec * fps));
   const frameDurationSec = 1 / fps;
 
   // 1. Pausar el Ticker de Pixi para tener control cuadro a cuadro exacto
@@ -45,10 +65,12 @@ export async function exportDeterministicVideo({
     format,
   });
 
+  const selectedQuality = QUALITY_MAP[quality] || QUALITY_VERY_HIGH;
+
   // 3. Crear CanvasSource usando WebCodecs H.264 / AVC
   const canvasSource = new CanvasSource(canvas, {
     codec: "avc",
-    quality: QUALITY_VERY_HIGH,
+    quality: selectedQuality,
   });
 
   output.addVideoTrack(canvasSource, {
@@ -60,6 +82,10 @@ export async function exportDeterministicVideo({
   try {
     // 4. Renderizado determinista cuadro a cuadro
     for (let frame = 0; frame < totalFrames; frame++) {
+      if (signal && signal.aborted) {
+        throw new DOMException("Grabación cancelada por el usuario.", "AbortError");
+      }
+
       const currentTimeSec = frame * frameDurationSec;
 
       // Si el usuario proveyó un gancho de animación manual para tiempo determinista
@@ -67,7 +93,6 @@ export async function exportDeterministicVideo({
         onFrame(currentTimeSec, frame, app.ticker);
       } else {
         // Avance sintético del ticker de PixiJS v8
-        // Simular deltaMS = frameDurationSec * 1000
         app.ticker.update(currentTimeSec * 1000);
       }
 
@@ -81,7 +106,7 @@ export async function exportDeterministicVideo({
       onProgress(frame + 1, totalFrames, percent);
 
       // Ceder brevemente al event loop para mantener responsiva la interfaz
-      if (frame % 3 === 0) {
+      if (frame % 4 === 0) {
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
@@ -116,4 +141,3 @@ export function downloadBlob(blob, filename = "pixi-creative-coding.mp4") {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
