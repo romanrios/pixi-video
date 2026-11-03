@@ -176,19 +176,120 @@ button, input, select, textarea {
   display: flex;
   flex: 1;
   height: calc(100vh - 58px);
+  overflow: hidden;
+  position: relative;
 }
 
-.editor-pane,
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  width: 50%;
+  min-width: 260px;
+  max-width: calc(100% - 260px);
+  flex-shrink: 0;
+  border-right: none;
+}
+
 .preview-pane {
   flex: 1;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  min-width: 260px;
+  background: #080c14;
 }
 
-.editor-pane {
+/* Splitters / Gutters Draggables */
+.gutter-col {
+  width: 8px;
+  background: #0b111e;
+  border-left: 1px solid #1e293b;
   border-right: 1px solid #1e293b;
+  cursor: col-resize;
+  position: relative;
+  user-select: none;
+  touch-action: none;
+  flex-shrink: 0;
+  z-index: 20;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.gutter-col:hover,
+.gutter-col.dragging {
+  background: #6366f1;
+  border-color: #818cf8;
+}
+
+.gutter-col::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 28px;
+  border-radius: 1px;
+  background: #475569;
+  transition: background-color 0.15s ease;
+}
+
+.gutter-col:hover::after,
+.gutter-col.dragging::after {
+  background: #ffffff;
+}
+
+.gutter-row {
+  height: 8px;
+  background: #0b111e;
+  border-top: 1px solid #1e293b;
+  border-bottom: 1px solid #1e293b;
+  cursor: row-resize;
+  position: relative;
+  user-select: none;
+  touch-action: none;
+  flex-shrink: 0;
+  z-index: 20;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.gutter-row:hover,
+.gutter-row.dragging {
+  background: #6366f1;
+  border-color: #818cf8;
+}
+
+.gutter-row::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 2px;
+  border-radius: 1px;
+  background: #475569;
+  transition: background-color 0.15s ease;
+}
+
+.gutter-row:hover::after,
+.gutter-row.dragging::after {
+  background: #ffffff;
+}
+
+/* Clases globales durante el arrastre */
+body.is-resizing-col,
+body.is-resizing-col * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.is-resizing-row,
+body.is-resizing-row * {
+  cursor: row-resize !important;
+  user-select: none !important;
 }
 
 .pane-header {
@@ -253,10 +354,13 @@ button, input, select, textarea {
 
 .console-box {
   height: 130px;
+  min-height: 32px;
   background: #090d16;
-  border-top: 1px solid #1e293b;
+  border-top: none;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .console-header {

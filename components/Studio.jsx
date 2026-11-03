@@ -355,7 +355,124 @@ export default function Studio() {
       }
     }
 
+    function setupSplitters() {
+      const playgroundBody = document.getElementById("playground-body");
+      const editorPane = document.getElementById("editor-pane");
+      const gutterCol = document.getElementById("gutter-horizontal");
+      const gutterRow = document.getElementById("gutter-vertical");
+      const consoleBox = document.getElementById("console-output");
+
+      // 1. Horizontal Splitter (Code Editor vs. Preview Pane)
+      if (gutterCol && playgroundBody && editorPane) {
+        const savedWidth = localStorage.getItem("pixi_studio_editor_width");
+        if (savedWidth) {
+          const parsed = parseFloat(savedWidth);
+          if (!isNaN(parsed) && parsed >= 260) {
+            editorPane.style.width = `${parsed}px`;
+          }
+        }
+
+        let isDraggingCol = false;
+
+        gutterCol.addEventListener("pointerdown", (e) => {
+          isDraggingCol = true;
+          gutterCol.setPointerCapture(e.pointerId);
+          gutterCol.classList.add("dragging");
+          document.body.classList.add("is-resizing-col");
+          e.preventDefault();
+        });
+
+        gutterCol.addEventListener("pointermove", (e) => {
+          if (!isDraggingCol) return;
+          const rect = playgroundBody.getBoundingClientRect();
+          const minW = 260;
+          const maxW = rect.width - 260;
+          const newW = Math.max(minW, Math.min(maxW, e.clientX - rect.left));
+          editorPane.style.width = `${newW}px`;
+          if (editor) editor.refresh();
+        });
+
+        const stopDragCol = (e) => {
+          if (!isDraggingCol) return;
+          isDraggingCol = false;
+          try {
+            gutterCol.releasePointerCapture(e.pointerId);
+          } catch {}
+          gutterCol.classList.remove("dragging");
+          document.body.classList.remove("is-resizing-col");
+          if (editor) editor.refresh();
+          if (editorPane.offsetWidth >= 260) {
+            localStorage.setItem("pixi_studio_editor_width", String(editorPane.offsetWidth));
+          }
+        };
+
+        gutterCol.addEventListener("pointerup", stopDragCol);
+        gutterCol.addEventListener("pointercancel", stopDragCol);
+
+        gutterCol.addEventListener("dblclick", () => {
+          editorPane.style.width = "50%";
+          localStorage.removeItem("pixi_studio_editor_width");
+          if (editor) editor.refresh();
+        });
+      }
+
+      // 2. Vertical Splitter (Code Editor vs. Console Output)
+      if (gutterRow && editorPane && consoleBox) {
+        const savedHeight = localStorage.getItem("pixi_studio_console_height");
+        if (savedHeight) {
+          const parsed = parseFloat(savedHeight);
+          if (!isNaN(parsed) && parsed >= 32) {
+            consoleBox.style.height = `${parsed}px`;
+          }
+        }
+
+        let isDraggingRow = false;
+
+        gutterRow.addEventListener("pointerdown", (e) => {
+          isDraggingRow = true;
+          gutterRow.setPointerCapture(e.pointerId);
+          gutterRow.classList.add("dragging");
+          document.body.classList.add("is-resizing-row");
+          e.preventDefault();
+        });
+
+        gutterRow.addEventListener("pointermove", (e) => {
+          if (!isDraggingRow) return;
+          const rect = editorPane.getBoundingClientRect();
+          const minH = 32;
+          const maxH = rect.height - 100;
+          const newH = Math.max(minH, Math.min(maxH, rect.bottom - e.clientY));
+          consoleBox.style.height = `${newH}px`;
+          if (editor) editor.refresh();
+        });
+
+        const stopDragRow = (e) => {
+          if (!isDraggingRow) return;
+          isDraggingRow = false;
+          try {
+            gutterRow.releasePointerCapture(e.pointerId);
+          } catch {}
+          gutterRow.classList.remove("dragging");
+          document.body.classList.remove("is-resizing-row");
+          if (editor) editor.refresh();
+          if (consoleBox.offsetHeight >= 32) {
+            localStorage.setItem("pixi_studio_console_height", String(consoleBox.offsetHeight));
+          }
+        };
+
+        gutterRow.addEventListener("pointerup", stopDragRow);
+        gutterRow.addEventListener("pointercancel", stopDragRow);
+
+        gutterRow.addEventListener("dblclick", () => {
+          consoleBox.style.height = "130px";
+          localStorage.removeItem("pixi_studio_console_height");
+          if (editor) editor.refresh();
+        });
+      }
+    }
+
     setupEventListeners();
+    setupSplitters();
     updateExportSummary();
     initAuth();
     initLibraryUI({
@@ -386,7 +503,22 @@ export default function Studio() {
 
     checkCodeMirror();
 
+    const onWindowResize = () => {
+      const playgroundBody = document.getElementById("playground-body");
+      const editorPane = document.getElementById("editor-pane");
+      if (playgroundBody && editorPane) {
+        const maxW = playgroundBody.offsetWidth - 260;
+        if (editorPane.offsetWidth > maxW && maxW >= 260) {
+          editorPane.style.width = `${maxW}px`;
+        }
+      }
+      if (editor) editor.refresh();
+    };
+    window.addEventListener("resize", onWindowResize);
+
     return () => {
+      window.removeEventListener("resize", onWindowResize);
+      document.body.classList.remove("is-resizing-col", "is-resizing-row");
       if (app) {
         try {
           app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });
@@ -457,8 +589,8 @@ export default function Studio() {
         </div>
       </header>
 
-      <main className="playground-body">
-        <section className="editor-pane">
+      <main className="playground-body" id="playground-body">
+        <section className="editor-pane" id="editor-pane">
           <div className="pane-header">
             <div className="pane-header-title">
               <span>JS Code Editor (PixiJS v8)</span>
@@ -480,13 +612,28 @@ export default function Studio() {
           <div className="editor-wrapper">
             <textarea id="code-editor"></textarea>
           </div>
+          <div
+            id="gutter-vertical"
+            className="gutter-row"
+            role="separator"
+            aria-orientation="horizontal"
+            title="Drag to resize console (Double-click to reset)"
+          ></div>
           <div id="console-output" className="console-box">
             <div className="console-header">Console Output:</div>
             <div id="console-logs" className="console-logs"></div>
           </div>
         </section>
 
-        <section className="preview-pane">
+        <div
+          id="gutter-horizontal"
+          className="gutter-col"
+          role="separator"
+          aria-orientation="vertical"
+          title="Drag to resize panels (Double-click to reset)"
+        ></div>
+
+        <section className="preview-pane" id="preview-pane">
           <div className="pane-header">
             <span>Preview & Canvas</span>
             <div className="status-tags">
