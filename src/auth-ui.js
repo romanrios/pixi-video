@@ -58,6 +58,9 @@ function renderNavbarAuth() {
     document.getElementById("btn-logout")?.addEventListener("click", async () => {
       try {
         await logoutUser();
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.disableAutoSelect();
+        }
         currentUser = null;
         renderNavbarAuth();
         notifyListeners();
@@ -84,6 +87,11 @@ function setupGoogleButton() {
 
   if (window.google?.accounts?.id && window.__googleClientId) {
     try {
+      console.info(
+        `%c[Google Auth] Montando botón de inicio de sesión.\n• Origen actual: "${window.location.origin}"\n• Si ves un error 403 "The given origin is not allowed", agrega este origen exacto en Google Cloud Console > Credenciales > Tu Client ID > Orígenes de JavaScript autorizados.`,
+        "color: #38bdf8; font-weight: bold;"
+      );
+
       window.google.accounts.id.renderButton(slot, {
         theme: "filled_blue",
         size: "medium",

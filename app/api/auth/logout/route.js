@@ -5,7 +5,14 @@ export async function POST() {
     success: true,
     message: "Sesión cerrada correctamente.",
   });
-  response.cookies.delete("pixi_session");
+
+  response.cookies.set("pixi_session", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
+
   return response;
 }
-
