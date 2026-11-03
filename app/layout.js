@@ -3,7 +3,7 @@ import Script from "next/script";
 
 export const metadata = {
   title: "Pixi.js v8 Creative Studio & Video Exporter",
-  description: "Playground de programación creativa en PixiJS v8 con exportador MP4 y biblioteca comunitaria",
+  description: "Creative coding playground in PixiJS v8 with MP4 video exporter and community preset library",
   icons: {
     icon: "/pixijs-logo.svg",
   },
@@ -11,7 +11,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

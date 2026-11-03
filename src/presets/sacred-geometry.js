@@ -1,5 +1,5 @@
-// 2. Geometría Sagrada & Mandalas Cinemáticos
-// Formas armónicas basadas en trigonometría y simetría radial.
+// 2. Sacred Geometry & Mandalas
+// Harmonic shapes driven by trigonometry, radial symmetry, and vibrant color oscillation.
 
 const cx = app.screen.width / 2;
 const cy = app.screen.height / 2;
@@ -36,9 +36,8 @@ app.ticker.add((ticker) => {
     }
   }
 
-  // Núcleo central pulsante
+  // Pulsing central star core
   gfx.star(cx, cy, 8, 30 + Math.sin(t * 3) * 8, 15)
      .fill({ color: 0xffe600 })
      .stroke({ width: 3, color: 0xff5500 });
 });
-

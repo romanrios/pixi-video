@@ -1,4 +1,6 @@
-// 4. Ondas Armónicas & Ruido Orgánico
+// 4. Harmonic Waves
+// Multiple organic sine waves with progressive phase shifts and dynamic rainbow gradient strokes.
+
 const width = app.screen.width;
 const height = app.screen.height;
 const cy = height / 2;
@@ -31,4 +33,3 @@ app.ticker.add((ticker) => {
     gfx.stroke({ width: 3.5, color, alpha: 0.85 });
   }
 });
-

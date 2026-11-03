@@ -38,10 +38,10 @@ export async function exportDeterministicVideo({
   const width = canvas.width;
   const height = canvas.height;
 
-  // Asegurar dimensiones pares para H.264
+  // Ensure even dimensions for H.264
   if (width % 2 !== 0 || height % 2 !== 0) {
     throw new Error(
-      `Las dimensiones del canvas deben ser pares para codificar en MP4/H264 (${width}x${height}). Ajusta la resolución.`
+      `Canvas dimensions must be even numbers for MP4/H.264 encoding (${width}x${height}). Please adjust resolution.`
     );
   }
 
@@ -81,7 +81,7 @@ export async function exportDeterministicVideo({
     // 4. Renderizado determinista cuadro a cuadro
     for (let frame = 0; frame < totalFrames; frame++) {
       if (signal && signal.aborted) {
-        throw new DOMException("Grabación cancelada por el usuario.", "AbortError");
+        throw new DOMException("Recording cancelled by user.", "AbortError");
       }
 
       const currentTimeSec = frame * frameDurationSec;
@@ -113,7 +113,7 @@ export async function exportDeterministicVideo({
     await output.finalize();
 
     if (!target.buffer) {
-      throw new Error("No se pudo obtener el búfer del archivo finalizado.");
+      throw new Error("Failed to retrieve final file buffer.");
     }
 
     const blob = new Blob([target.buffer], { type: "video/mp4" });

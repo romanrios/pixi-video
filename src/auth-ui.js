@@ -17,7 +17,7 @@ function notifyListeners() {
     try {
       fn(currentUser);
     } catch (e) {
-      console.error("Error en listener de autenticación:", e);
+      console.error("Error in auth listener:", e);
     }
   });
 }
@@ -31,7 +31,7 @@ function renderNavbarAuth() {
 
   if (currentUser) {
     const adminBadge = currentUser.isAdmin
-      ? `<span class="user-role-badge admin" title="Administrador del sistema">ADMIN</span>`
+      ? `<span class="user-role-badge admin" title="System Administrator">ADMIN</span>`
       : "";
 
     const avatar = currentUser.picture
@@ -45,7 +45,7 @@ function renderNavbarAuth() {
           <span class="user-display-name">${escapeHtml(currentUser.name)}</span>
           ${adminBadge}
         </div>
-        <button id="btn-logout" class="btn-logout" title="Cerrar sesión">
+        <button id="btn-logout" class="btn-logout" title="Sign out">
           <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
@@ -65,7 +65,7 @@ function renderNavbarAuth() {
         renderNavbarAuth();
         notifyListeners();
       } catch (err) {
-        console.error("Error cerrando sesión:", err);
+        console.error("Error signing out:", err);
       }
     });
   } else {
@@ -88,7 +88,7 @@ function setupGoogleButton() {
   if (window.google?.accounts?.id && window.__googleClientId) {
     try {
       console.info(
-        `%c[Google Auth] Montando botón de inicio de sesión.\n• Origen actual: "${window.location.origin}"\n• Si ves un error 403 "The given origin is not allowed", agrega este origen exacto en Google Cloud Console > Credenciales > Tu Client ID > Orígenes de JavaScript autorizados.`,
+        `%c[Google Auth] Mounting sign-in button.\n• Current origin: "${window.location.origin}"\n• If you see a 403 "The given origin is not allowed" error, add this exact origin in Google Cloud Console > Credentials > Your Client ID > Authorized JavaScript origins.`,
         "color: #38bdf8; font-weight: bold;"
       );
 
@@ -97,10 +97,10 @@ function setupGoogleButton() {
         size: "medium",
         shape: "pill",
         text: "signin_with",
-        locale: "es",
+        locale: "en",
       });
     } catch (e) {
-      console.warn("No se pudo renderizar el botón de Google:", e);
+      console.warn("Could not render Google button:", e);
     }
   } else {
     // Si el script de Google aún no cargó, reintentar en un momento
@@ -118,8 +118,8 @@ async function handleGoogleCredentialResponse(response) {
     renderNavbarAuth();
     notifyListeners();
   } catch (err) {
-    console.error("Error al iniciar sesión con Google:", err);
-    alert(`Error de autenticación con Google: ${err.message}`);
+    console.error("Error signing in with Google:", err);
+    alert(`Google authentication error: ${err.message}`);
   }
 }
 
@@ -154,7 +154,7 @@ export async function initAuth() {
     renderNavbarAuth();
     notifyListeners();
   } catch (err) {
-    console.warn("Aviso durante la carga de autenticación:", err);
+    console.warn("Notice during auth load:", err);
   }
 }
 

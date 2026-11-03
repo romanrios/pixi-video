@@ -195,7 +195,8 @@ button, input, select, textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
+  padding: 6px 14px;
+  min-height: 44px;
   background: #0f172a;
   font-size: 0.8rem;
   color: #94a3b8;
@@ -225,6 +226,35 @@ button, input, select, textarea {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.res-select-badge {
+  background: #1e293b;
+  color: #93c5fd;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 500;
+  border: 1px solid #334155;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.res-select-badge:hover {
+  border-color: #6366f1;
+  background: #25334d;
+}
+
+.res-select-badge:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.res-select-badge option {
+  background: #161f30;
+  color: #f1f5f9;
 }
 
 .dim-badge {

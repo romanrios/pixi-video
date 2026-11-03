@@ -16,7 +16,7 @@ const Studio = dynamic(() => import("../components/Studio.jsx"), {
         fontFamily: "Inter, sans-serif",
       }}
     >
-      Iniciando Pixi Studio...
+      Starting Pixi Studio...
     </div>
   ),
 });

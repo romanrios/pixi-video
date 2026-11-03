@@ -8,7 +8,7 @@ export async function POST(request) {
     const { credential } = await request.json();
     if (!credential) {
       return NextResponse.json(
-        { error: "Falta la credencial de autenticación de Google." },
+        { error: "Missing Google authentication credential." },
         { status: 400 }
       );
     }
@@ -83,9 +83,9 @@ export async function POST(request) {
 
     return response;
   } catch (err) {
-    console.error("Error autenticando con Google en Next.js:", err);
+    console.error("Error authenticating with Google in Next.js:", err);
     return NextResponse.json(
-      { error: `Error de autenticación: ${err.message}` },
+      { error: `Authentication error: ${err.message}` },
       { status: 401 }
     );
   }

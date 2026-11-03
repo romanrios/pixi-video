@@ -47,9 +47,9 @@ export async function GET(request) {
 
     return NextResponse.json({ presets });
   } catch (err) {
-    console.error("Error al obtener presets en Next.js:", err);
+    console.error("Error fetching presets in Next.js:", err);
     return NextResponse.json(
-      { error: "Error al cargar la biblioteca de presets." },
+      { error: "Failed to load preset library." },
       { status: 500 }
     );
   }
@@ -57,7 +57,7 @@ export async function GET(request) {
 
 /**
  * POST /api/presets
- * Publicar un nuevo preset.
+ * Publish a new preset.
  */
 export async function POST(request) {
   try {
@@ -66,7 +66,7 @@ export async function POST(request) {
     const currentUser = getUserFromRequest(request);
     if (!currentUser) {
       return NextResponse.json(
-        { error: "Debes iniciar sesión con Google para publicar un preset." },
+        { error: "You must sign in with Google to publish a preset." },
         { status: 401 }
       );
     }
@@ -75,13 +75,13 @@ export async function POST(request) {
 
     if (!title || !title.trim()) {
       return NextResponse.json(
-        { error: "El título del preset es obligatorio." },
+        { error: "Preset title is required." },
         { status: 400 }
       );
     }
     if (!code || !code.trim()) {
       return NextResponse.json(
-        { error: "El código del preset es obligatorio." },
+        { error: "Preset code is required." },
         { status: 400 }
       );
     }
@@ -108,15 +108,15 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: true,
-        message: "¡Preset publicado con éxito en la biblioteca!",
+        message: "Preset published successfully to the library!",
         presetId: id,
       },
       { status: 201 }
     );
   } catch (err) {
-    console.error("Error al publicar preset en Next.js:", err);
+    console.error("Error publishing preset in Next.js:", err);
     return NextResponse.json(
-      { error: `Error al guardar preset: ${err.message}` },
+      { error: `Error saving preset: ${err.message}` },
       { status: 500 }
     );
   }

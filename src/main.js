@@ -143,7 +143,7 @@ async function initPixiApp(width = currentWidth, height = currentHeight) {
  */
 async function runUserCode(width = currentWidth, height = currentHeight) {
   clearLogs();
-  logMessage(`Ejecutando código PixiJS v8 (${width}x${height})...`, "info");
+  logMessage(`Running PixiJS v8 code (${width}x${height})...`, "info");
 
   try {
     await initPixiApp(width, height);
@@ -159,7 +159,7 @@ async function runUserCode(width = currentWidth, height = currentHeight) {
     };
 
     await runFn(app, PIXI, customConsole);
-    logMessage("Escena generada correctamente.", "info");
+    logMessage("Scene generated successfully.", "info");
   } catch (err) {
     console.error(err);
     logMessage(err.message || String(err), "error");
@@ -183,7 +183,7 @@ async function startVideoExport() {
 
   exportProgressBar.style.width = "0%";
   exportProgressPercent.textContent = "0%";
-  exportProgressText.textContent = "Preparando codificador AVC / H.264...";
+  exportProgressText.textContent = "Initializing AVC / H.264 encoder...";
 
   abortController = new AbortController();
 
@@ -191,7 +191,7 @@ async function startVideoExport() {
     // 1. Reiniciar la escena con las dimensiones de exportación
     await runUserCode(width, height);
 
-    logMessage(`Iniciando grabación: ${durationSec}s a ${fps} FPS (${width}x${height})...`, "info");
+    logMessage(`Starting recording: ${durationSec}s at ${fps} FPS (${width}x${height})...`, "info");
 
     const blob = await exportDeterministicVideo({
       app,
@@ -202,24 +202,24 @@ async function startVideoExport() {
       onProgress: (current, total, percent) => {
         exportProgressBar.style.width = `${percent}%`;
         exportProgressPercent.textContent = `${percent}%`;
-        exportProgressText.textContent = `Cuadro ${current} / ${total} (${percent}%)`;
+        exportProgressText.textContent = `Frame ${current} / ${total} (${percent}%)`;
       },
     });
 
-    logMessage(`¡Video generado con éxito! Tamaño: ${(blob.size / (1024 * 1024)).toFixed(2)} MB`, "info");
+    logMessage(`Video generated successfully! Size: ${(blob.size / (1024 * 1024)).toFixed(2)} MB`, "info");
     downloadBlob(blob, filename.endsWith(".mp4") ? filename : `${filename}.mp4`);
 
-    exportProgressText.textContent = "¡Descarga iniciada con éxito!";
+    exportProgressText.textContent = "Download started successfully!";
     setTimeout(() => {
       progressModal.close();
     }, 1200);
   } catch (err) {
     if (err.name === "AbortError") {
-      logMessage("Grabación cancelada por el usuario.", "warn");
+      logMessage("Recording cancelled by user.", "warn");
     } else {
       console.error(err);
-      alert(`Error exportando video: ${err.message}`);
-      logMessage(`Error en exportación: ${err.message}`, "error");
+      alert(`Export error: ${err.message}`);
+      logMessage(`Export error: ${err.message}`, "error");
     }
     progressModal.close();
   } finally {
@@ -283,10 +283,10 @@ function setupEventListeners() {
   btnCloseRecordModal.addEventListener("click", () => recordModal.close());
   btnCancelRecord.addEventListener("click", () => recordModal.close());
 
-  // Cancelar exportación activa
+  // Cancel active export
   btnAbortExport.addEventListener("click", () => {
     if (abortController) {
-      exportProgressText.textContent = "Cancelando grabación...";
+      exportProgressText.textContent = "Cancelling recording...";
       abortController.abort();
     }
   });
@@ -357,7 +357,7 @@ async function main() {
     onSelectPreset: (preset) => {
       editor.setValue(preset.code);
       runUserCode();
-      logMessage(`Preset "${preset.title}" cargado desde la biblioteca.`, "info");
+      logMessage(`Preset "${preset.title}" loaded from library.`, "info");
     },
     getEditorCode: () => (editor ? editor.getValue() : ""),
   });

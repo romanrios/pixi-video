@@ -26,7 +26,7 @@ export async function loginWithGoogleCredential(credential) {
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.error || "Error al autenticar con Google.");
+    throw new Error(err.error || "Error authenticating with Google.");
   }
   return res.json();
 }
@@ -41,7 +41,7 @@ export async function logoutUser() {
 export async function fetchPresets() {
   const res = await fetch("/api/presets");
   if (!res.ok) {
-    throw new Error("No se pudieron cargar los presets.");
+    throw new Error("Failed to load presets.");
   }
   const data = await res.json();
   return data.presets || [];
@@ -55,7 +55,7 @@ export async function createPreset({ title, description, code }) {
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.error || "Error al publicar preset.");
+    throw new Error(err.error || "Error publishing preset.");
   }
   return res.json();
 }
@@ -68,7 +68,7 @@ export async function updatePreset(id, { title, description, code }) {
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.error || "Error al actualizar preset.");
+    throw new Error(err.error || "Error updating preset.");
   }
   return res.json();
 }
@@ -79,7 +79,7 @@ export async function deletePreset(id) {
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.error || "Error al eliminar preset.");
+    throw new Error(err.error || "Error deleting preset.");
   }
   return res.json();
 }

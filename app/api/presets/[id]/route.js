@@ -17,7 +17,7 @@ export async function GET(request, context) {
     });
 
     if (result.rows.length === 0) {
-      return NextResponse.json({ error: "Preset no encontrado." }, { status: 404 });
+      return NextResponse.json({ error: "Preset not found." }, { status: 404 });
     }
 
     const row = result.rows[0];
@@ -40,14 +40,14 @@ export async function GET(request, context) {
       },
     });
   } catch (err) {
-    console.error("Error al obtener preset:", err);
-    return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });
+    console.error("Error fetching preset:", err);
+    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }
 
 /**
  * PUT /api/presets/[id]
- * Solo permitido para el creador del preset o el administrador global.
+ * Only allowed for the preset creator or a global admin.
  */
 export async function PUT(request, context) {
   try {
@@ -58,7 +58,7 @@ export async function PUT(request, context) {
     const currentUser = getUserFromRequest(request);
     if (!currentUser) {
       return NextResponse.json(
-        { error: "Debes iniciar sesión para editar un preset." },
+        { error: "You must sign in to edit a preset." },
         { status: 401 }
       );
     }
@@ -69,7 +69,7 @@ export async function PUT(request, context) {
     });
 
     if (check.rows.length === 0) {
-      return NextResponse.json({ error: "El preset a editar no existe." }, { status: 404 });
+      return NextResponse.json({ error: "The preset to edit does not exist." }, { status: 404 });
     }
 
     const preset = check.rows[0];
@@ -79,7 +79,7 @@ export async function PUT(request, context) {
       return NextResponse.json(
         {
           error:
-            "No tienes permiso para editar este preset. Solo el creador o el admin pueden modificarlo.",
+            "You do not have permission to edit this preset. Only the creator or an admin can modify it.",
         },
         { status: 403 }
       );
@@ -88,10 +88,10 @@ export async function PUT(request, context) {
     const { title, description, code } = await request.json();
 
     if (!title || !title.trim()) {
-      return NextResponse.json({ error: "El título es obligatorio." }, { status: 400 });
+      return NextResponse.json({ error: "Title is required." }, { status: 400 });
     }
     if (!code || !code.trim()) {
-      return NextResponse.json({ error: "El código es obligatorio." }, { status: 400 });
+      return NextResponse.json({ error: "Code is required." }, { status: 400 });
     }
 
     await db.execute({
@@ -105,12 +105,12 @@ export async function PUT(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: "Preset actualizado correctamente.",
+      message: "Preset updated successfully.",
     });
   } catch (err) {
-    console.error("Error al actualizar preset en Next.js:", err);
+    console.error("Error updating preset in Next.js:", err);
     return NextResponse.json(
-      { error: `Error al actualizar: ${err.message}` },
+      { error: `Error updating preset: ${err.message}` },
       { status: 500 }
     );
   }
@@ -118,7 +118,7 @@ export async function PUT(request, context) {
 
 /**
  * DELETE /api/presets/[id]
- * Solo permitido para el creador del preset o el administrador global.
+ * Only allowed for the preset creator or a global admin.
  */
 export async function DELETE(request, context) {
   try {
@@ -129,7 +129,7 @@ export async function DELETE(request, context) {
     const currentUser = getUserFromRequest(request);
     if (!currentUser) {
       return NextResponse.json(
-        { error: "Debes iniciar sesión para eliminar un preset." },
+        { error: "You must sign in to delete a preset." },
         { status: 401 }
       );
     }
@@ -140,7 +140,7 @@ export async function DELETE(request, context) {
     });
 
     if (check.rows.length === 0) {
-      return NextResponse.json({ error: "El preset a eliminar no existe." }, { status: 404 });
+      return NextResponse.json({ error: "The preset to delete does not exist." }, { status: 404 });
     }
 
     const preset = check.rows[0];
@@ -150,7 +150,7 @@ export async function DELETE(request, context) {
       return NextResponse.json(
         {
           error:
-            "No tienes permiso para eliminar este preset. Solo el creador o el admin pueden borrarlo.",
+            "You do not have permission to delete this preset. Only the creator or an admin can delete it.",
         },
         { status: 403 }
       );
@@ -163,12 +163,12 @@ export async function DELETE(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: "Preset eliminado de la biblioteca.",
+      message: "Preset deleted from the library.",
     });
   } catch (err) {
-    console.error("Error al eliminar preset en Next.js:", err);
+    console.error("Error deleting preset in Next.js:", err);
     return NextResponse.json(
-      { error: `Error al eliminar: ${err.message}` },
+      { error: `Error deleting preset: ${err.message}` },
       { status: 500 }
     );
   }

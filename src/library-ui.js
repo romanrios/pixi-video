@@ -13,7 +13,7 @@ function formatDate(dateString) {
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString("es-ES", {
+    return date.toLocaleDateString("en-US", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -69,11 +69,11 @@ function renderPresets() {
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
         </svg>
-        <p class="empty-title">No se encontraron presets</p>
+        <p class="empty-title">No presets found</p>
         <p class="empty-desc">${
           currentFilter === "mine"
-            ? "Aún no has publicado ningún preset. ¡Crea uno desde el editor y compártelo!"
-            : "No hay presets que coincidan con la búsqueda."
+            ? "You haven't published any presets yet. Create one in the editor and share it!"
+            : "No presets match your search."
         }</p>
       </div>
     `;
@@ -90,7 +90,7 @@ function renderPresets() {
         : `<div class="card-author-placeholder">${(preset.userName || "U")[0]?.toUpperCase()}</div>`;
 
       const badge = isOwner
-        ? `<span class="preset-tag owner-tag">Tuyo</span>`
+        ? `<span class="preset-tag owner-tag">Yours</span>`
         : user && user.isAdmin
         ? `<span class="preset-tag admin-tag">Admin</span>`
         : "";
@@ -110,7 +110,7 @@ function renderPresets() {
 
           <div class="preset-card-body">
             <h3 class="preset-card-title">${escapeHtml(preset.title)}</h3>
-            <p class="preset-card-desc">${escapeHtml(preset.description || "Efecto interactivo en Pixi.js v8")}</p>
+            <p class="preset-card-desc">${escapeHtml(preset.description || "Interactive PixiJS v8 visual effect")}</p>
           </div>
 
           <div class="preset-card-footer">
@@ -118,20 +118,20 @@ function renderPresets() {
               <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
-              <span>Cargar en Editor</span>
+              <span>Load into Editor</span>
             </button>
 
             ${
               canManage
                 ? `
                 <div class="card-manage-actions">
-                  <button type="button" class="btn-icon-action btn-edit-preset" data-id="${preset.id}" title="Editar este preset">
+                  <button type="button" class="btn-icon-action btn-edit-preset" data-id="${preset.id}" title="Edit this preset">
                     <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button type="button" class="btn-icon-action btn-delete-preset danger" data-id="${preset.id}" title="Eliminar este preset">
+                  <button type="button" class="btn-icon-action btn-delete-preset danger" data-id="${preset.id}" title="Delete this preset">
                     <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
                       <polyline points="3 6 5 6 21 6"></polyline>
                       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -175,7 +175,7 @@ function renderPresets() {
       if (!found) return;
 
       const confirmDelete = window.confirm(
-        `¿Estás seguro de que deseas eliminar el preset "${found.title}" de la biblioteca? Esta acción no se puede deshacer.`
+        `Are you sure you want to delete preset "${found.title}" from the library? This action cannot be undone.`
       );
       if (!confirmDelete) return;
 
@@ -184,8 +184,8 @@ function renderPresets() {
         allPresets = allPresets.filter((p) => p.id !== id);
         renderPresets();
       } catch (err) {
-        console.error("Error eliminando preset:", err);
-        alert(`Error al eliminar: ${err.message}`);
+        console.error("Error deleting preset:", err);
+        alert(`Error deleting preset: ${err.message}`);
       }
     });
   });
@@ -199,7 +199,7 @@ export async function loadLibraryPresets() {
     allPresets = await fetchPresets();
     renderPresets();
   } catch (err) {
-    console.error("Error cargando presets:", err);
+    console.error("Error loading presets:", err);
   }
 }
 
@@ -220,13 +220,13 @@ export async function openLibraryModal() {
 export function openCreatePresetModal() {
   const user = getCurrentUser();
   if (!user) {
-    alert("Debes iniciar sesión con Google para publicar un preset en la biblioteca.");
+    alert("You must sign in with Google to publish a preset to the library.");
     return;
   }
 
   const code = getEditorCodeCallback ? getEditorCodeCallback() : "";
   if (!code || !code.trim()) {
-    alert("El editor de código está vacío.");
+    alert("The code editor is empty.");
     return;
   }
 
@@ -238,8 +238,8 @@ export function openCreatePresetModal() {
   const presetCodePreview = document.getElementById("preset-code-preview");
 
   editingPresetId = null;
-  if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = "Publicar Preset en la Biblioteca";
-  if (btnSubmitPresetEditor) btnSubmitPresetEditor.querySelector("span").textContent = "Publicar en la Biblioteca";
+  if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = "Publish Preset to Library";
+  if (btnSubmitPresetEditor) btnSubmitPresetEditor.querySelector("span").textContent = "Publish to Library";
   if (presetTitleInput) presetTitleInput.value = "";
   if (presetDescInput) presetDescInput.value = "";
   if (presetCodePreview) presetCodePreview.textContent = code;
@@ -261,8 +261,8 @@ function openEditPresetModal(preset) {
   const presetCodePreview = document.getElementById("preset-code-preview");
 
   editingPresetId = preset.id;
-  if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = `Editar Preset: ${preset.title}`;
-  if (btnSubmitPresetEditor) btnSubmitPresetEditor.querySelector("span").textContent = "Guardar Cambios";
+  if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = `Edit Preset: ${preset.title}`;
+  if (btnSubmitPresetEditor) btnSubmitPresetEditor.querySelector("span").textContent = "Save Changes";
   if (presetTitleInput) presetTitleInput.value = preset.title;
   if (presetDescInput) presetDescInput.value = preset.description || "";
   if (presetCodePreview) presetCodePreview.textContent = preset.code;
@@ -324,7 +324,7 @@ export function initLibraryUI({ onSelectPreset, getEditorCode }) {
   filterMineBtn?.addEventListener("click", () => {
     const user = getCurrentUser();
     if (!user) {
-      alert("Inicia sesión con Google para ver tus presets publicados.");
+      alert("Sign in with Google to view your published presets.");
       return;
     }
     currentFilter = "mine";
@@ -346,7 +346,7 @@ export function initLibraryUI({ onSelectPreset, getEditorCode }) {
       : "";
 
     if (!title) {
-      alert("Ingresa un título para el preset.");
+      alert("Please enter a title for the preset.");
       return;
     }
 
@@ -364,7 +364,7 @@ export function initLibraryUI({ onSelectPreset, getEditorCode }) {
       libraryModal?.showModal();
     } catch (err) {
       console.error(err);
-      alert(`Error al guardar: ${err.message}`);
+      alert(`Error saving preset: ${err.message}`);
     } finally {
       if (btnSubmitPresetEditor) btnSubmitPresetEditor.disabled = false;
     }

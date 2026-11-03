@@ -18,26 +18,23 @@ export default function Studio() {
     let editor = null;
     let currentWidth = 720;
     let currentHeight = 720;
-    let currentPresetTitle = "Campo de Flujo";
+    let previousResValue = "720x720";
+    let currentPresetTitle = "Flow Field";
     let abortController = null;
 
     // Referencias del DOM
     const canvasContainer = document.getElementById("canvas-container");
+    const resSelect = document.getElementById("preview-res-select");
     const btnRun = document.getElementById("btn-run");
     const btnOpenRecordModal = document.getElementById("btn-open-record-modal");
     const consoleLogs = document.getElementById("console-logs");
     const fpsCounter = document.getElementById("fps-counter");
-    const canvasDimBadge = document.getElementById("canvas-dim-badge");
 
     // Modal de Grabación
     const recordModal = document.getElementById("record-modal");
     const btnCloseRecordModal = document.getElementById("btn-close-record-modal");
     const btnCancelRecord = document.getElementById("btn-cancel-record");
     const recordForm = document.getElementById("record-form");
-    const modalExportRes = document.getElementById("modal-export-res");
-    const customResRow = document.getElementById("custom-res-row");
-    const customWidthInput = document.getElementById("custom-width");
-    const customHeightInput = document.getElementById("custom-height");
     const modalExportDuration = document.getElementById("modal-export-duration");
     const durationPills = document.getElementById("duration-pills");
     const modalExportFps = document.getElementById("modal-export-fps");
@@ -45,6 +42,14 @@ export default function Studio() {
     const modalExportFilename = document.getElementById("modal-export-filename");
     const summaryFrames = document.getElementById("summary-frames");
     const summaryRes = document.getElementById("summary-res");
+
+    // Modal de Resolución Personalizada
+    const customResModal = document.getElementById("custom-res-modal");
+    const customResForm = document.getElementById("custom-res-form");
+    const customWidthInput = document.getElementById("custom-width-input");
+    const customHeightInput = document.getElementById("custom-height-input");
+    const btnCloseCustomRes = document.getElementById("btn-close-custom-res");
+    const btnCancelCustomRes = document.getElementById("btn-cancel-custom-res");
 
     // Modal de Progreso
     const progressModal = document.getElementById("progress-modal");
@@ -68,16 +73,7 @@ export default function Studio() {
     }
 
     function getSelectedResolution() {
-      if (modalExportRes && modalExportRes.value === "custom") {
-        let w = parseInt(customWidthInput?.value || "1080", 10) || 1080;
-        let h = parseInt(customHeightInput?.value || "1080", 10) || 1080;
-        if (w % 2 !== 0) w += 1;
-        if (h % 2 !== 0) h += 1;
-        return { width: w, height: h };
-      }
-
-      const [w, h] = (modalExportRes?.value || "1080x1080").split("x").map(Number);
-      return { width: w || 720, height: h || 720 };
+      return { width: currentWidth, height: currentHeight };
     }
 
     function updateExportSummary() {
@@ -90,7 +86,7 @@ export default function Studio() {
       summaryFrames.textContent = `${totalFrames} frames`;
       summaryRes.textContent = `${width} x ${height}`;
 
-      const presetSlug = (currentPresetTitle || "animacion")
+      const presetSlug = (currentPresetTitle || "animation")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
@@ -105,13 +101,12 @@ export default function Studio() {
         try {
           app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });
         } catch (e) {
-          console.warn("Destrucción de instancia previa:", e);
+          console.warn("Instance cleanup error:", e);
         }
       }
 
       currentWidth = width;
       currentHeight = height;
-      if (canvasDimBadge) canvasDimBadge.textContent = `${width}x${height}`;
 
       app = new PIXI.Application();
 
@@ -142,13 +137,13 @@ export default function Studio() {
 
     async function runUserCode(width = currentWidth, height = currentHeight) {
       clearLogs();
-      logMessage(`Ejecutando código PixiJS v8 (${width}x${height})...`, "info");
+      logMessage(`Running PixiJS v8 code (${width}x${height})...`, "info");
 
       try {
         await initPixiApp(width, height);
 
         const userCode = editor ? editor.getValue() : "";
-        const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+        const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
         const runFn = new AsyncFunction("app", "PIXI", "console", userCode);
 
         const customConsole = {
@@ -159,7 +154,7 @@ export default function Studio() {
         };
 
         await runFn(app, PIXI, customConsole);
-        logMessage("Escena generada correctamente.", "info");
+        logMessage("Scene generated successfully.", "info");
       } catch (err) {
         console.error(err);
         logMessage(err.message || String(err), "error");
@@ -172,7 +167,7 @@ export default function Studio() {
       const fps = parseInt(modalExportFps?.value || "60", 10) || 60;
       const quality = modalExportQuality?.value || "very-high";
       const customName = modalExportFilename?.value.trim() || "";
-      const presetSlug = (currentPresetTitle || "animacion")
+      const presetSlug = (currentPresetTitle || "animation")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
@@ -183,14 +178,14 @@ export default function Studio() {
 
       if (exportProgressBar) exportProgressBar.style.width = "0%";
       if (exportProgressPercent) exportProgressPercent.textContent = "0%";
-      if (exportProgressText) exportProgressText.textContent = "Preparando codificador AVC / H.264...";
+      if (exportProgressText) exportProgressText.textContent = "Preparing AVC / H.264 encoder...";
 
       abortController = new AbortController();
 
       try {
         await runUserCode(width, height);
 
-        logMessage(`Iniciando grabación: ${durationSec}s a ${fps} FPS (${width}x${height})...`, "info");
+        logMessage(`Starting recording: ${durationSec}s at ${fps} FPS (${width}x${height})...`, "info");
 
         const blob = await exportDeterministicVideo({
           app,
@@ -201,24 +196,24 @@ export default function Studio() {
           onProgress: (current, total, percent) => {
             if (exportProgressBar) exportProgressBar.style.width = `${percent}%`;
             if (exportProgressPercent) exportProgressPercent.textContent = `${percent}%`;
-            if (exportProgressText) exportProgressText.textContent = `Cuadro ${current} / ${total} (${percent}%)`;
+            if (exportProgressText) exportProgressText.textContent = `Frame ${current} / ${total} (${percent}%)`;
           },
         });
 
-        logMessage(`¡Video generado con éxito! Tamaño: ${(blob.size / (1024 * 1024)).toFixed(2)} MB`, "info");
+        logMessage(`Video generated successfully! Size: ${(blob.size / (1024 * 1024)).toFixed(2)} MB`, "info");
         downloadBlob(blob, filename.endsWith(".mp4") ? filename : `${filename}.mp4`);
 
-        if (exportProgressText) exportProgressText.textContent = "¡Descarga iniciada con éxito!";
+        if (exportProgressText) exportProgressText.textContent = "Download started successfully!";
         setTimeout(() => {
           if (progressModal) progressModal.close();
         }, 1200);
       } catch (err) {
         if (err.name === "AbortError") {
-          logMessage("Grabación cancelada por el usuario.", "warn");
+          logMessage("Recording cancelled by user.", "warn");
         } else {
           console.error(err);
-          alert(`Error exportando video: ${err.message}`);
-          logMessage(`Error en exportación: ${err.message}`, "error");
+          alert(`Error exporting video: ${err.message}`);
+          logMessage(`Export error: ${err.message}`, "error");
         }
         if (progressModal) progressModal.close();
       } finally {
@@ -260,7 +255,7 @@ export default function Studio() {
 
       btnAbortExport?.addEventListener("click", () => {
         if (abortController) {
-          if (exportProgressText) exportProgressText.textContent = "Cancelando grabación...";
+          if (exportProgressText) exportProgressText.textContent = "Cancelling recording...";
           abortController.abort();
         }
       });
@@ -270,17 +265,58 @@ export default function Studio() {
         startVideoExport();
       });
 
-      modalExportRes?.addEventListener("change", () => {
-        if (modalExportRes.value === "custom") {
-          customResRow?.classList.remove("hidden");
+      // Selector de resolución en la barra del preview
+      resSelect?.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if (val === "custom") {
+          if (customWidthInput) customWidthInput.value = currentWidth;
+          if (customHeightInput) customHeightInput.value = currentHeight;
+          customResModal?.showModal();
         } else {
-          customResRow?.classList.add("hidden");
+          previousResValue = val;
+          const [w, h] = val.split("x").map(Number);
+          if (w && h) {
+            currentWidth = w;
+            currentHeight = h;
+            runUserCode(w, h);
+            updateExportSummary();
+          }
         }
+      });
+
+      // Modal de resolución personalizada
+      customResForm?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        let w = parseInt(customWidthInput?.value || "720", 10) || 720;
+        let h = parseInt(customHeightInput?.value || "720", 10) || 720;
+
+        // Asegurar dimensiones pares para H.264
+        if (w % 2 !== 0) w += 1;
+        if (h % 2 !== 0) h += 1;
+
+        currentWidth = w;
+        currentHeight = h;
+        previousResValue = "custom";
+
+        const customOpt = resSelect?.querySelector('option[value="custom"]');
+        if (customOpt) {
+          customOpt.textContent = `Custom (${w}x${h})`;
+        }
+        if (resSelect) resSelect.value = "custom";
+
+        customResModal?.close();
+        runUserCode(w, h);
         updateExportSummary();
       });
 
-      customWidthInput?.addEventListener("input", updateExportSummary);
-      customHeightInput?.addEventListener("input", updateExportSummary);
+      btnCloseCustomRes?.addEventListener("click", () => customResModal?.close());
+      btnCancelCustomRes?.addEventListener("click", () => customResModal?.close());
+
+      customResModal?.addEventListener("close", () => {
+        if (resSelect && previousResValue !== "custom") {
+          resSelect.value = previousResValue;
+        }
+      });
 
       modalExportDuration?.addEventListener("input", () => {
         const val = parseFloat(modalExportDuration.value);
@@ -333,7 +369,7 @@ export default function Studio() {
           if (badge) {
             badge.textContent = preset.title;
           }
-          logMessage(`Preset "${preset.title}" cargado desde la biblioteca.`, "info");
+          logMessage(`Preset "${preset.title}" loaded from library.`, "info");
         }
       },
       getEditorCode: () => (editor ? editor.getValue() : ""),
@@ -377,20 +413,20 @@ export default function Studio() {
           <button
             id="btn-open-library"
             className="btn btn-secondary"
-            title="Explorar biblioteca comunitaria de presets"
+            title="Explore community preset library"
             onClick={openLibraryModal}
           >
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
             </svg>
-            <span>Biblioteca</span>
+            <span>Library</span>
           </button>
 
           <button
             id="btn-open-save-preset"
             className="btn btn-secondary"
-            title="Publicar el código actual en la biblioteca"
+            title="Publish current code to the library"
             onClick={openCreatePresetModal}
           >
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -398,26 +434,17 @@ export default function Studio() {
               <polyline points="17 21 17 13 7 13 7 21"></polyline>
               <polyline points="7 3 7 8 15 8"></polyline>
             </svg>
-            <span>Publicar</span>
+            <span>Publish</span>
           </button>
 
           <div className="control-divider"></div>
 
-          <button id="btn-run" className="btn btn-primary" title="Ctrl + Enter para ejecutar código">
-            <svg className="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            <span>Ejecutar</span>
-          </button>
-
-          <div className="control-divider"></div>
-
-          <button id="btn-open-record-modal" className="btn btn-record" title="Configurar y exportar animación a MP4">
+          <button id="btn-open-record-modal" className="btn btn-record" title="Configure and export animation to MP4">
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="23 7 16 12 23 17 23 7"></polygon>
               <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
             </svg>
-            <span>Grabar MP4</span>
+            <span>Record MP4</span>
           </button>
 
           <div className="control-divider"></div>
@@ -434,28 +461,49 @@ export default function Studio() {
         <section className="editor-pane">
           <div className="pane-header">
             <div className="pane-header-title">
-              <span>Editor de Código JS (PixiJS v8)</span>
+              <span>JS Code Editor (PixiJS v8)</span>
               <span id="active-preset-badge" className="active-preset-badge">
-                Campo de Flujo
+                Flow Field
               </span>
             </div>
-            <span className="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> para ejecutar</span>
+            <button
+              id="btn-run"
+              className="btn btn-primary btn-sm"
+              title="Run code on canvas (Ctrl + Enter)"
+            >
+              <svg className="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Run (Ctrl+Enter)</span>
+            </button>
           </div>
           <div className="editor-wrapper">
             <textarea id="code-editor"></textarea>
           </div>
           <div id="console-output" className="console-box">
-            <div className="console-header">Salida / Consola:</div>
+            <div className="console-header">Console Output:</div>
             <div id="console-logs" className="console-logs"></div>
           </div>
         </section>
 
         <section className="preview-pane">
           <div className="pane-header">
-            <span>Vista Previa & Canvas</span>
+            <span>Preview & Canvas</span>
             <div className="status-tags">
-              <span id="canvas-dim-badge" className="dim-badge" title="Resolución activa de la escena">720x720</span>
-              <span id="fps-counter" className="fps-badge" title="Tasa de refresco en vivo">FPS: --</span>
+              <select
+                id="preview-res-select"
+                className="res-select-badge"
+                defaultValue="720x720"
+                title="Change scene resolution"
+              >
+                <option value="720x720">720x720 (1:1)</option>
+                <option value="1080x1080">1080x1080 (1:1)</option>
+                <option value="1920x1080">1920x1080 (16:9)</option>
+                <option value="1080x1920">1080x1920 (9:16)</option>
+                <option value="1280x720">1280x720 (16:9)</option>
+                <option value="custom">Custom...</option>
+              </select>
+              <span id="fps-counter" className="fps-badge" title="Live refresh rate">FPS: --</span>
             </div>
           </div>
           <div id="canvas-container" className="canvas-container"></div>
@@ -473,11 +521,11 @@ export default function Studio() {
               </svg>
             </div>
             <div>
-              <h2 id="record-modal-title">Configuración de Grabación MP4</h2>
-              <p className="modal-subtitle">Render determinista cuadro a cuadro sin pérdida de frames</p>
+              <h2 id="record-modal-title">MP4 Recording Settings</h2>
+              <p className="modal-subtitle">Frame-by-frame deterministic render with zero frame drops</p>
             </div>
           </div>
-          <button type="button" id="btn-close-record-modal" className="modal-close-btn" aria-label="Cerrar modal">
+          <button type="button" id="btn-close-record-modal" className="modal-close-btn" aria-label="Close modal">
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -486,40 +534,14 @@ export default function Studio() {
         </div>
 
         <form id="record-form" className="modal-form" method="dialog">
-          <div className="form-field">
-            <div className="field-header">
-              <label htmlFor="modal-export-res">Resolución & Relación de Aspecto</label>
-              <span className="field-hint">Preset optimizado</span>
-            </div>
-            <select id="modal-export-res" className="form-select" defaultValue="1080x1080">
-              <option value="1080x1080">1080 x 1080 — 1:1 Cuadrado (Instagram Post / Feed HD)</option>
-              <option value="1080x1920">1080 x 1920 — 9:16 Vertical (Reels / TikTok / Shorts)</option>
-              <option value="1920x1080">1920 x 1080 — 16:9 Horizontal (YouTube Full HD)</option>
-              <option value="1280x720">1280 x 720 — 16:9 Horizontal (HD estándar)</option>
-              <option value="720x720">720 x 720 — 1:1 Cuadrado (Preview rápido)</option>
-              <option value="custom">Personalizado (Ingresar dimensiones manuales)...</option>
-            </select>
-          </div>
-
-          <div id="custom-res-row" className="form-row hidden">
-            <div className="form-field">
-              <label htmlFor="custom-width">Ancho (px)</label>
-              <input type="number" id="custom-width" className="form-input" defaultValue="1080" min="128" max="3840" step="2" />
-            </div>
-            <div className="form-field">
-              <label htmlFor="custom-height">Alto (px)</label>
-              <input type="number" id="custom-height" className="form-input" defaultValue="1080" min="128" max="3840" step="2" />
-            </div>
-          </div>
-
           <div className="form-row">
             <div className="form-field">
               <div className="field-header">
-                <label htmlFor="modal-export-duration">Duración</label>
+                <label htmlFor="modal-export-duration">Duration</label>
               </div>
               <div className="input-with-unit">
                 <input type="number" id="modal-export-duration" className="form-input" defaultValue="5" min="1" max="60" step="0.5" />
-                <span className="unit-suffix">seg</span>
+                <span className="unit-suffix">sec</span>
               </div>
               <div className="quick-pills" id="duration-pills">
                 <button type="button" className="pill" data-val="3">3s</button>
@@ -531,60 +553,125 @@ export default function Studio() {
 
             <div className="form-field">
               <div className="field-header">
-                <label htmlFor="modal-export-fps">Tasa de Cuadros (FPS)</label>
+                <label htmlFor="modal-export-fps">Frame Rate (FPS)</label>
               </div>
               <select id="modal-export-fps" className="form-select" defaultValue="60">
-                <option value="60">60 FPS (Ultra Fluido / Recomendado)</option>
-                <option value="30">30 FPS (Estándar / Rápido)</option>
-                <option value="24">24 FPS (Cinematográfico)</option>
+                <option value="60">60 FPS (Ultra Smooth / Recommended)</option>
+                <option value="30">30 FPS (Standard / Fast)</option>
+                <option value="24">24 FPS (Cinematic)</option>
               </select>
-              <span className="field-help">60 FPS asegura animaciones suaves y continuas.</span>
+              <span className="field-help">60 FPS ensures smooth, continuous animations.</span>
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-field">
-              <label htmlFor="modal-export-quality">Calidad del Encoder</label>
+              <label htmlFor="modal-export-quality">Encoder Quality</label>
               <select id="modal-export-quality" className="form-select" defaultValue="very-high">
-                <option value="very-high">Máxima Calidad (Sin compresión visible)</option>
-                <option value="high">Alta (Equilibrada)</option>
-                <option value="medium">Media (Archivo más liviano)</option>
+                <option value="very-high">Very High Quality (Visually lossless)</option>
+                <option value="high">High (Balanced)</option>
+                <option value="medium">Medium (Smaller file size)</option>
               </select>
             </div>
 
             <div className="form-field">
-              <label htmlFor="modal-export-filename">Nombre de Archivo</label>
-              <input type="text" id="modal-export-filename" className="form-input" placeholder="animacion.mp4" spellCheck="false" />
+              <label htmlFor="modal-export-filename">File Name</label>
+              <input type="text" id="modal-export-filename" className="form-input" placeholder="animation.mp4" spellCheck="false" />
             </div>
           </div>
 
           <div className="export-summary-card">
             <div className="summary-item">
-              <span className="summary-label">Fotogramas</span>
+              <span className="summary-label">Frames</span>
               <strong id="summary-frames" className="summary-value">300 frames</strong>
             </div>
             <div className="summary-divider"></div>
             <div className="summary-item">
-              <span className="summary-label">Resolución</span>
-              <strong id="summary-res" className="summary-value">1080 x 1080</strong>
+              <span className="summary-label">Resolution</span>
+              <strong id="summary-res" className="summary-value">720 x 720</strong>
             </div>
             <div className="summary-divider"></div>
             <div className="summary-item">
-              <span className="summary-label">Formato & Códec</span>
+              <span className="summary-label">Format & Codec</span>
               <strong className="summary-value">MP4 (H.264 / AVC)</strong>
             </div>
           </div>
 
           <div className="modal-footer">
             <button type="button" id="btn-cancel-record" className="btn btn-secondary">
-              Cancelar
+              Cancel
             </button>
             <button type="submit" id="btn-confirm-record" className="btn btn-record">
               <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="23 7 16 12 23 17 23 7"></polygon>
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
               </svg>
-              <span>Iniciar Grabación</span>
+              <span>Start Recording</span>
+            </button>
+          </div>
+        </form>
+      </dialog>
+
+      {/* Modal de Resolución Personalizada */}
+      <dialog id="custom-res-modal" className="modal-dialog" closedby="any" aria-labelledby="custom-res-title">
+        <div className="modal-header">
+          <div className="modal-title-group">
+            <div className="modal-icon-badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "#818cf8" }}>
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <div>
+              <h2 id="custom-res-title">Custom Resolution</h2>
+              <p className="modal-subtitle">Enter dimensions in pixels (even numbers required for MP4)</p>
+            </div>
+          </div>
+          <button type="button" id="btn-close-custom-res" className="modal-close-btn" aria-label="Close modal">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="custom-res-form" className="modal-form" method="dialog">
+          <div className="form-row">
+            <div className="form-field">
+              <label htmlFor="custom-width-input">Width (px)</label>
+              <input
+                type="number"
+                id="custom-width-input"
+                className="form-input"
+                defaultValue="720"
+                min="128"
+                max="3840"
+                step="2"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="custom-height-input">Height (px)</label>
+              <input
+                type="number"
+                id="custom-height-input"
+                className="form-input"
+                defaultValue="720"
+                min="128"
+                max="3840"
+                step="2"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button type="button" id="btn-cancel-custom-res" className="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" id="btn-apply-custom-res" className="btn btn-primary">
+              Apply Resolution
             </button>
           </div>
         </form>
@@ -595,11 +682,11 @@ export default function Studio() {
         <div className="progress-card">
           <div className="recording-badge-row">
             <span className="recording-dot"></span>
-            <span className="recording-label">RENDERIZANDO VIDEO MP4</span>
+            <span className="recording-label">RENDERING MP4 VIDEO</span>
           </div>
-          <h3 id="progress-modal-title">Exportación en Proceso</h3>
+          <h3 id="progress-modal-title">Export in Progress</h3>
           <p className="modal-desc">
-            Renderizando cuadro a cuadro de forma determinista para garantizar 0% pérdida de frames y máxima fluidez.
+            Rendering frame by frame deterministically to ensure 0% frame drop and maximum smoothness.
           </p>
 
           <div className="progress-container">
@@ -607,13 +694,13 @@ export default function Studio() {
           </div>
 
           <div className="progress-details">
-            <span id="export-progress-text">Inicializando codificador AVC/H.264...</span>
+            <span id="export-progress-text">Initializing AVC/H.264 encoder...</span>
             <span id="export-progress-percent">0%</span>
           </div>
 
           <div className="progress-actions">
             <button type="button" id="btn-abort-export" className="btn btn-secondary btn-sm">
-              Cancelar Grabación
+              Cancel Recording
             </button>
           </div>
         </div>
@@ -630,15 +717,15 @@ export default function Studio() {
               </svg>
             </div>
             <div>
-              <h2 id="library-modal-title">Biblioteca Comunitaria</h2>
-              <p className="modal-subtitle">Explora presets compartidos por la comunidad o carga tus creaciones</p>
+              <h2 id="library-modal-title">Community Library</h2>
+              <p className="modal-subtitle">Explore community presets or load your creations</p>
             </div>
           </div>
           <button
             type="button"
             id="btn-close-library"
             className="modal-close-btn"
-            aria-label="Cerrar modal"
+            aria-label="Close modal"
             onClick={() => document.getElementById("library-modal")?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
@@ -654,15 +741,15 @@ export default function Studio() {
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="library-search-input" className="search-input" placeholder="Buscar preset por título, autor o descripción..." />
+            <input type="text" id="library-search-input" className="search-input" placeholder="Search presets by title, author, or description..." />
           </div>
 
           <div className="library-filters">
             <div className="filter-pills">
-              <button type="button" id="filter-all-btn" className="pill active">Todos</button>
-              <button type="button" id="filter-mine-btn" className="pill">Mis Presets</button>
+              <button type="button" id="filter-all-btn" className="pill active">All</button>
+              <button type="button" id="filter-mine-btn" className="pill">My Presets</button>
             </div>
-            <span id="library-count-badge" className="library-counter">Cargando...</span>
+            <span id="library-count-badge" className="library-counter">Loading...</span>
           </div>
         </div>
 
@@ -685,15 +772,15 @@ export default function Studio() {
               </svg>
             </div>
             <div>
-              <h2 id="preset-editor-title-heading">Publicar Preset en la Biblioteca</h2>
-              <p className="modal-subtitle">Comparte tu código Pixi.js v8 con la comunidad</p>
+              <h2 id="preset-editor-title-heading">Publish Preset to Library</h2>
+              <p className="modal-subtitle">Share your PixiJS v8 code with the community</p>
             </div>
           </div>
           <button
             type="button"
             id="btn-close-preset-editor"
             className="modal-close-btn"
-            aria-label="Cerrar modal"
+            aria-label="Close modal"
             onClick={() => document.getElementById("preset-editor-modal")?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
@@ -705,17 +792,17 @@ export default function Studio() {
 
         <form id="preset-editor-form" className="modal-form" method="dialog">
           <div className="form-field">
-            <label htmlFor="preset-title-input">Título del Preset *</label>
-            <input type="text" id="preset-title-input" className="form-input" placeholder="Ej. Galaxia Espiral con Partículas" required maxLength={80} />
+            <label htmlFor="preset-title-input">Preset Title *</label>
+            <input type="text" id="preset-title-input" className="form-input" placeholder="e.g. Spiral Galaxy with Particles" required maxLength={80} />
           </div>
 
           <div className="form-field">
-            <label htmlFor="preset-desc-input">Descripción (Opcional)</label>
-            <textarea id="preset-desc-input" className="form-textarea" rows={2} placeholder="Describe brevemente el efecto visual, interacción o técnica usada..."></textarea>
+            <label htmlFor="preset-desc-input">Description (Optional)</label>
+            <textarea id="preset-desc-input" className="form-textarea" rows={2} placeholder="Briefly describe the visual effect, interaction, or technique used..."></textarea>
           </div>
 
           <div className="form-field">
-            <label>Código a guardar</label>
+            <label>Code to save</label>
             <div className="code-preview-box">
               <pre><code id="preset-code-preview"></code></pre>
             </div>
@@ -728,13 +815,13 @@ export default function Studio() {
               className="btn btn-secondary"
               onClick={() => document.getElementById("preset-editor-modal")?.close()}
             >
-              Cancelar
+              Cancel
             </button>
             <button type="submit" id="btn-submit-preset-editor" className="btn btn-primary">
               <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              <span>Publicar en la Biblioteca</span>
+              <span>Publish to Library</span>
             </button>
           </div>
         </form>
