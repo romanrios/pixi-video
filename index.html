@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixi.js v8 Creative Studio & Video Exporter</title>
+  <link rel="icon" type="image/svg+xml" href="/pixijs-logo.svg" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./src/style.css" />
+  <!-- CodeMirror para editor de código fluido -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <header class="navbar">
+      <div class="brand">
+        <img src="/pixijs-logo.svg" alt="PixiJS Logo" class="brand-logo" />
+        <div class="brand-text">
+          <h1>Pixi.js Creative Studio</h1>
+          <!-- <span class="badge">v8 + MP4 Exporter</span> -->
+        </div>
+      </div>
+      <div class="controls">
+        <div class="control-group">
+          <label for="examples-select">Preset:</label>
+          <select id="examples-select">
+            <option value="flow-field">Campo de Flujo (Generativo)</option>
+            <option value="sacred-geometry">Geometría Sagrada & Mandalas</option>
+            <option value="cyber-grid">Túnel Synthwave 3D</option>
+            <option value="audio-waves">Ondas Armónicas</option>
+          </select>
+        </div>
+
+        <div class="control-divider"></div>
+
+        <!-- Opciones de exportación de video -->
+        <div class="control-group">
+          <label for="export-duration">Duración:</label>
+          <select id="export-duration">
+            <option value="3">3 seg</option>
+            <option value="5" selected>5 seg</option>
+            <option value="10">10 seg</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="export-fps">FPS:</label>
+          <select id="export-fps">
+            <option value="30">30 FPS</option>
+            <option value="60" selected>60 FPS (Ultra Smooth)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="export-res">Resolución:</label>
+          <select id="export-res">
+            <option value="720x720" selected>720 x 720 (1:1 Cuadrado)</option>
+            <option value="1080x1080">1080 x 1080 (HD Instagram/Post)</option>
+            <option value="1080x1920">1080 x 1920 (9:16 Reel / TikTok)</option>
+            <option value="1280x720">1280 x 720 (16:9 HD)</option>
+          </select>
+        </div>
+
+        <button id="btn-export-video" class="btn btn-record" title="Renderizar determinista cuadro a cuadro en MP4">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+          </svg>
+          <span>Grabar MP4</span>
+        </button>
+
+        <button id="btn-run" class="btn btn-primary" title="Ctrl + Enter para ejecutar">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span>Ejecutar</span>
+        </button>
+
+        <button id="btn-reset" class="btn btn-secondary" title="Restablecer código del preset actual">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          <span>Reset</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="playground-body">
+      <!-- Editor Column -->
+      <section class="editor-pane">
+        <div class="pane-header">
+          <span>Editor de Código JS (PixiJS v8)</span>
+          <span class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> para ejecutar</span>
+        </div>
+        <div class="editor-wrapper">
+          <textarea id="code-editor"></textarea>
+        </div>
+        <div id="console-output" class="console-box">
+          <div class="console-header">Salida / Consola:</div>
+          <div id="console-logs" class="console-logs"></div>
+        </div>
+      </section>
+
+      <!-- Canvas / Preview Column -->
+      <section class="preview-pane">
+        <div class="pane-header">
+          <span>Vista Previa & Canvas</span>
+          <div class="status-tags">
+            <span id="canvas-dim-badge" class="dim-badge">720x720</span>
+            <span id="fps-counter" class="fps-badge">FPS: --</span>
+          </div>
+        </div>
+        <div id="canvas-container" class="canvas-container"></div>
+      </section>
+    </main>
+
+    <!-- Overlay Modal de Grabación de Video -->
+    <div id="export-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <h3>Renderizando Video de Alta Calidad</h3>
+        <p class="modal-desc">
+          Renderizando cuadro a cuadro de forma determinista para garantizar 0% pérdida de frames y máxima fluidez.
+        </p>
+        <div class="progress-container">
+          <div id="export-progress-bar" class="progress-bar" style="width: 0%"></div>
+        </div>
+        <div class="progress-details">
+          <span id="export-progress-text">Preparando motor de video...</span>
+          <span id="export-progress-percent">0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>

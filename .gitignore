@@ -1,0 +1,39 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Build de producción y caché
+dist/
+dist-ssr/
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Editores e IDEs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Agentes y temporales locales
+.agents/
+
