@@ -10,8 +10,11 @@ import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/l
 export default function Studio() {
   const containerRef = useRef(null);
   const optionsRef = useRef(null);
+  const viewDropdownRef = useRef(null);
   const editorInstanceRef = useRef(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [viewSubmenuOpen, setViewSubmenuOpen] = useState(false);
+  const [viewDropdownOpen, setViewDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState("split");
 
   const changeViewMode = useCallback((mode) => {
@@ -43,22 +46,37 @@ export default function Studio() {
     const handleClickOutside = (e) => {
       if (optionsRef.current && !optionsRef.current.contains(e.target)) {
         setOptionsOpen(false);
+        setViewSubmenuOpen(false);
+      }
+      if (viewDropdownRef.current && !viewDropdownRef.current.contains(e.target)) {
+        setViewDropdownOpen(false);
       }
     };
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         setOptionsOpen(false);
+        setViewSubmenuOpen(false);
+        setViewDropdownOpen(false);
       }
       if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
         if (e.key === "1") {
           e.preventDefault();
           changeViewMode("split");
+          setOptionsOpen(false);
+          setViewSubmenuOpen(false);
+          setViewDropdownOpen(false);
         } else if (e.key === "2") {
           e.preventDefault();
           changeViewMode("code");
+          setOptionsOpen(false);
+          setViewSubmenuOpen(false);
+          setViewDropdownOpen(false);
         } else if (e.key === "3") {
           e.preventDefault();
           changeViewMode("preview");
+          setOptionsOpen(false);
+          setViewSubmenuOpen(false);
+          setViewDropdownOpen(false);
         }
       }
     };
@@ -673,58 +691,104 @@ export default function Studio() {
               </button>
 
               <div className="menu-divider" role="separator"></div>
-              <div className="menu-section-header">View</div>
 
-              <button
-                type="button"
-                className={`menu-item ${viewMode === "split" ? "selected" : ""}`}
-                role="menuitem"
-                onClick={() => {
-                  setOptionsOpen(false);
-                  changeViewMode("split");
-                }}
+              <div
+                className="submenu-wrapper"
+                onMouseEnter={() => setViewSubmenuOpen(true)}
+                onMouseLeave={() => setViewSubmenuOpen(false)}
               >
-                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="12" y1="3" x2="12" y2="21"></line>
-                </svg>
-                <span>Split View</span>
-                <span className="menu-shortcut">Alt+1</span>
-              </button>
+                <button
+                  type="button"
+                  className={`menu-item menu-item-has-submenu ${viewSubmenuOpen ? "open" : ""}`}
+                  role="menuitem"
+                  aria-haspopup="true"
+                  aria-expanded={viewSubmenuOpen}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setViewSubmenuOpen((prev) => !prev);
+                  }}
+                >
+                  {viewMode === "code" && (
+                    <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="16 18 22 12 16 6"></polyline>
+                      <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                  )}
+                  {viewMode === "split" && (
+                    <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="12" y1="3" x2="12" y2="21"></line>
+                    </svg>
+                  )}
+                  {viewMode === "preview" && (
+                    <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  )}
+                  <span>View</span>
+                  <span className="submenu-tag">{viewMode === "code" ? "Code" : viewMode === "preview" ? "Preview" : "Split"}</span>
+                  <svg className={`chevron-icon chevron-sub ${viewSubmenuOpen ? "rotated" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
 
-              <button
-                type="button"
-                className={`menu-item ${viewMode === "code" ? "selected" : ""}`}
-                role="menuitem"
-                onClick={() => {
-                  setOptionsOpen(false);
-                  changeViewMode("code");
-                }}
-              >
-                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 18 22 12 16 6"></polyline>
-                  <polyline points="8 6 2 12 8 18"></polyline>
-                </svg>
-                <span>Code Only</span>
-                <span className="menu-shortcut">Alt+2</span>
-              </button>
+                <div className={`options-submenu ${viewSubmenuOpen ? "open" : ""}`} role="menu">
+                  <button
+                    type="button"
+                    className={`menu-item ${viewMode === "split" ? "selected" : ""}`}
+                    role="menuitem"
+                    onClick={() => {
+                      changeViewMode("split");
+                      setOptionsOpen(false);
+                      setViewSubmenuOpen(false);
+                    }}
+                  >
+                    <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="12" y1="3" x2="12" y2="21"></line>
+                    </svg>
+                    <span>Split View</span>
+                    <span className="menu-shortcut">Alt+1</span>
+                  </button>
 
-              <button
-                type="button"
-                className={`menu-item ${viewMode === "preview" ? "selected" : ""}`}
-                role="menuitem"
-                onClick={() => {
-                  setOptionsOpen(false);
-                  changeViewMode("preview");
-                }}
-              >
-                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <span>Preview Only</span>
-                <span className="menu-shortcut">Alt+3</span>
-              </button>
+                  <button
+                    type="button"
+                    className={`menu-item ${viewMode === "code" ? "selected" : ""}`}
+                    role="menuitem"
+                    onClick={() => {
+                      changeViewMode("code");
+                      setOptionsOpen(false);
+                      setViewSubmenuOpen(false);
+                    }}
+                  >
+                    <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="16 18 22 12 16 6"></polyline>
+                      <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                    <span>Code Only</span>
+                    <span className="menu-shortcut">Alt+2</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`menu-item ${viewMode === "preview" ? "selected" : ""}`}
+                    role="menuitem"
+                    onClick={() => {
+                      changeViewMode("preview");
+                      setOptionsOpen(false);
+                      setViewSubmenuOpen(false);
+                    }}
+                  >
+                    <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span>Preview Only</span>
+                    <span className="menu-shortcut">Alt+3</span>
+                  </button>
+                </div>
+              </div>
 
               <div className="menu-divider" role="separator"></div>
 
@@ -750,46 +814,95 @@ export default function Studio() {
         </div>
 
         <div className="controls">
-          <div className="view-mode-group" role="group" aria-label="View Mode">
+          <div className="view-dropdown-container" ref={viewDropdownRef}>
             <button
+              id="btn-view-dropdown"
               type="button"
-              className={`view-btn ${viewMode === "code" ? "active" : ""}`}
-              onClick={() => changeViewMode("code")}
-              title="Code Only (Alt+2)"
-              aria-pressed={viewMode === "code"}
+              className={`btn btn-view ${viewDropdownOpen ? "active" : ""}`}
+              onClick={() => setViewDropdownOpen((prev) => !prev)}
+              aria-expanded={viewDropdownOpen}
+              aria-haspopup="menu"
+              title="Change view layout (Alt+1, Alt+2, Alt+3)"
             >
-              <svg className="view-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="16 18 22 12 16 6"></polyline>
-                <polyline points="8 6 2 12 8 18"></polyline>
+              {viewMode === "code" && (
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+              )}
+              {viewMode === "split" && (
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="12" y1="3" x2="12" y2="21"></line>
+                </svg>
+              )}
+              {viewMode === "preview" && (
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              )}
+              <span>
+                <span className="view-label-prefix">View: </span>
+                {viewMode === "code" ? "Code" : viewMode === "preview" ? "Preview" : "Split"}
+              </span>
+              <svg className={`chevron-icon ${viewDropdownOpen ? "rotated" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
-              <span>Code</span>
             </button>
-            <button
-              type="button"
-              className={`view-btn ${viewMode === "split" ? "active" : ""}`}
-              onClick={() => changeViewMode("split")}
-              title="Split View (Alt+1)"
-              aria-pressed={viewMode === "split"}
-            >
-              <svg className="view-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="12" y1="3" x2="12" y2="21"></line>
-              </svg>
-              <span>Split</span>
-            </button>
-            <button
-              type="button"
-              className={`view-btn ${viewMode === "preview" ? "active" : ""}`}
-              onClick={() => changeViewMode("preview")}
-              title="Preview Only (Alt+3)"
-              aria-pressed={viewMode === "preview"}
-            >
-              <svg className="view-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              <span>Preview</span>
-            </button>
+
+            <div className={`options-menu view-menu-right ${viewDropdownOpen ? "open" : ""}`} role="menu" aria-orientation="vertical">
+              <button
+                type="button"
+                className={`menu-item ${viewMode === "split" ? "selected" : ""}`}
+                role="menuitem"
+                onClick={() => {
+                  changeViewMode("split");
+                  setViewDropdownOpen(false);
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="12" y1="3" x2="12" y2="21"></line>
+                </svg>
+                <span>Split View</span>
+                <span className="menu-shortcut">Alt+1</span>
+              </button>
+
+              <button
+                type="button"
+                className={`menu-item ${viewMode === "code" ? "selected" : ""}`}
+                role="menuitem"
+                onClick={() => {
+                  changeViewMode("code");
+                  setViewDropdownOpen(false);
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                <span>Code Only</span>
+                <span className="menu-shortcut">Alt+2</span>
+              </button>
+
+              <button
+                type="button"
+                className={`menu-item ${viewMode === "preview" ? "selected" : ""}`}
+                role="menuitem"
+                onClick={() => {
+                  changeViewMode("preview");
+                  setViewDropdownOpen(false);
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>Preview Only</span>
+                <span className="menu-shortcut">Alt+3</span>
+              </button>
+            </div>
           </div>
 
           <div className="control-divider"></div>

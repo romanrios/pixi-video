@@ -234,54 +234,113 @@ button, input, select, textarea {
   margin: 0 4px;
 }
 
-/* View Mode Segmented Controls */
-.view-mode-group {
-  display: inline-flex;
-  align-items: center;
-  background: #0b111e;
-  border: 1px solid #1e293b;
-  border-radius: 8px;
-  padding: 2px;
-  gap: 2px;
+/* View Dropdown on Navbar Controls */
+.view-dropdown-container {
+  position: relative;
+  display: inline-block;
 }
 
-.view-btn {
+.btn-view {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   padding: 5px 11px;
-  background: transparent;
-  color: #94a3b8;
-  border: none;
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #334155;
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
-  line-height: 1;
 }
 
-.view-btn:hover {
-  color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.view-btn.active {
-  background: #1e293b;
+.btn-view:hover,
+.btn-view.active {
+  background: #28374d;
   color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  border-color: #6366f1;
 }
 
-.view-btn-icon {
+.btn-view .btn-icon {
   width: 14px;
   height: 14px;
-  stroke-width: 2.2;
+  color: #818cf8;
 }
 
-.view-btn.active .view-btn-icon {
-  color: #818cf8;
+.options-menu.view-menu-right {
+  left: auto;
+  right: 0;
+  min-width: 175px;
+}
+
+/* Submenu inside Options dropdown */
+.submenu-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.menu-item-has-submenu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.submenu-tag {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  background: #1e293b;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #334155;
+  margin-left: auto;
+  margin-right: 2px;
+}
+
+.chevron-sub {
+  width: 13px;
+  height: 13px;
+  color: #64748b;
+  transition: transform 0.15s ease;
+}
+
+.options-submenu {
+  position: absolute;
+  top: -6px;
+  left: calc(100% + 4px);
+  min-width: 175px;
+  background: #0f172a;
+  border: 1px solid #28374d;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px) scale(0.98);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.options-submenu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0) scale(1);
+}
+
+@media (min-width: 641px) {
+  .submenu-wrapper:hover .options-submenu {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0) scale(1);
+  }
+  .submenu-wrapper:hover .chevron-sub {
+    color: #cbd5e1;
+  }
 }
 
 .controls label {
@@ -1630,16 +1689,29 @@ dialog.about-dialog {
 }
 
 /* Responsividad */
-@media (max-width: 768px) {
-  .view-btn span {
+@media (max-width: 640px) {
+  .options-submenu {
+    position: static;
+    transform: none;
+    box-shadow: none;
+    border: none;
+    padding: 2px 0 2px 14px;
+    background: transparent;
     display: none;
   }
-  .view-btn {
-    padding: 5px 8px;
-  }
-}
 
-@media (max-width: 640px) {
+  .options-submenu.open {
+    display: flex;
+  }
+
+  .chevron-sub.rotated {
+    transform: rotate(90deg);
+  }
+
+  .view-label-prefix {
+    display: none;
+  }
+
   .form-row {
     flex-direction: column;
   }
