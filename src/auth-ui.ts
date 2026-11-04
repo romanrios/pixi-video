@@ -132,13 +132,17 @@ function setupGoogleButton() {
 /**
  * Callback ejecutado al recibir credenciales desde Google GIS.
  */
-async function handleGoogleCredentialResponse(response) {
+async function handleGoogleCredentialResponse(response: any) {
+  if (!response || !response.credential) {
+    console.warn("Google authentication did not return credentials (possible origin mismatch or user cancellation):", response);
+    return;
+  }
   try {
     const data = await loginWithGoogleCredential(response.credential);
     currentUser = data.user;
     renderNavbarAuth();
     notifyListeners();
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error signing in with Google:", err);
     alert(`Google authentication error: ${err.message}`);
   }
