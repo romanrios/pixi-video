@@ -682,13 +682,13 @@ body.is-resizing-row * {
   flex: 1;
   position: relative;
   overflow: hidden;
+  height: 100%;
+  width: 100%;
 }
 
-.CodeMirror {
-  height: 100% !important;
-  font-family: "Fira Code", Monaco, Consolas, "Courier New", monospace;
-  font-size: 13.5px;
-  line-height: 1.55;
+.monaco-editor,
+.monaco-editor .overflow-guard {
+  border-radius: 0;
 }
 
 .console-box {

@@ -2,32 +2,67 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import * as PIXI from "pixi.js";
+import Editor from "@monaco-editor/react";
 import { EXAMPLES } from "../src/examples";
 import { exportDeterministicVideo, downloadBlob } from "../src/recorder";
 import type { VideoQuality } from "@/types/recorder";
 import { initAuth } from "../src/auth-ui";
 import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/library-ui";
+import { configureMonaco, transpileTypeScript } from "../src/monaco-pixi";
 
 export default function Studio() {
-  const containerRef = useRef(null);
-  const optionsRef = useRef(null);
-  const viewDropdownRef = useRef(null);
-  const editorInstanceRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const optionsRef = useRef<HTMLDivElement | null>(null);
+  const viewDropdownRef = useRef<HTMLDivElement | null>(null);
+  const editorInstanceRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
+  const runUserCodeRef = useRef<(() => Promise<void>) | null>(null);
+
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [viewSubmenuOpen, setViewSubmenuOpen] = useState(false);
   const [viewDropdownOpen, setViewDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState("split");
 
-  const changeViewMode = useCallback((mode) => {
+  const changeViewMode = useCallback((mode: string) => {
     setViewMode(mode);
     try {
       localStorage.setItem("pixi_studio_view_mode", mode);
     } catch {}
     setTimeout(() => {
-      editorInstanceRef.current?.refresh();
+      editorInstanceRef.current?.layout();
       window.dispatchEvent(new Event("resize"));
     }, 50);
   }, []);
+
+  const handleEditorDidMount = useCallback(
+    (editor: any, monaco: any) => {
+      editorInstanceRef.current = editor;
+      monacoRef.current = monaco;
+
+      configureMonaco(monaco);
+
+      // Atajo de ejecución: Ctrl/Cmd + Enter
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+        runUserCodeRef.current?.();
+      });
+
+      // Atajo de comentar / descomentar: Ctrl/Cmd + }
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.BracketRight, () => {
+        editor.trigger("keyboard", "editor.action.commentLine", {});
+      });
+
+      // Atajos de cambio de vista: Alt+1, Alt+2, Alt+3
+      editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.Digit1, () => changeViewMode("split"));
+      editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.Digit2, () => changeViewMode("code"));
+      editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.Digit3, () => changeViewMode("preview"));
+
+      // Ejecutar la escena inicial cuando el editor esté listo
+      setTimeout(() => {
+        runUserCodeRef.current?.();
+      }, 50);
+    },
+    [changeViewMode]
+  );
 
   const openAboutModal = () => {
     const modal = document.getElementById("about-modal") as HTMLDialogElement | null;
@@ -94,7 +129,6 @@ export default function Studio() {
     window.PIXI = PIXI;
 
     let app = null;
-    let editor = null;
     let currentWidth = 720;
     let currentHeight = 720;
     let previousResValue = "720x720";
@@ -387,8 +421,9 @@ export default function Studio() {
       };
 
       try {
-        const rawCode = editor ? editor.getValue() : "";
-        const transformedCode = transformPixiImports(rawCode);
+        const rawCode = editorInstanceRef.current ? editorInstanceRef.current.getValue() : "";
+        const jsCode = await transpileTypeScript(monacoRef.current, editorInstanceRef.current, rawCode);
+        const transformedCode = transformPixiImports(jsCode);
 
         const customConsole = {
           log: (...args) =>
@@ -489,31 +524,6 @@ export default function Studio() {
       } finally {
         abortController = null;
       }
-    }
-
-    function initEditor() {
-      const textarea = document.getElementById("code-editor");
-      if (!textarea || !window.CodeMirror) return;
-
-      editor = window.CodeMirror.fromTextArea(textarea, {
-        mode: "javascript",
-        theme: "dracula",
-        lineNumbers: true,
-        tabSize: 2,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-      });
-      editorInstanceRef.current = editor;
-
-      editor.setValue(EXAMPLES["basic-shapes"] || EXAMPLES["flow-field"] || "");
-
-      editor.setOption("extraKeys", {
-        "Ctrl-Enter": () => runUserCode(),
-        "Cmd-Enter": () => runUserCode(),
-        "Alt-1": () => changeViewMode("split"),
-        "Alt-2": () => changeViewMode("code"),
-        "Alt-3": () => changeViewMode("preview"),
-      });
     }
 
     function setupEventListeners() {
@@ -665,10 +675,10 @@ export default function Studio() {
           const maxW = rect.width - 260;
           const newW = Math.max(minW, Math.min(maxW, e.clientX - rect.left));
           editorPane.style.width = `${newW}px`;
-          if (editor) editor.refresh();
+          editorInstanceRef.current?.layout();
         });
 
-        const stopDragCol = (e) => {
+        const stopDragCol = (e: PointerEvent) => {
           if (!isDraggingCol) return;
           isDraggingCol = false;
           try {
@@ -676,7 +686,7 @@ export default function Studio() {
           } catch {}
           gutterCol.classList.remove("dragging");
           document.body.classList.remove("is-resizing-col");
-          if (editor) editor.refresh();
+          editorInstanceRef.current?.layout();
           if (editorPane.offsetWidth >= 260) {
             localStorage.setItem("pixi_studio_editor_width", String(editorPane.offsetWidth));
           }
@@ -688,7 +698,7 @@ export default function Studio() {
         gutterCol.addEventListener("dblclick", () => {
           editorPane.style.width = "50%";
           localStorage.removeItem("pixi_studio_editor_width");
-          if (editor) editor.refresh();
+          editorInstanceRef.current?.layout();
         });
       }
 
@@ -719,10 +729,10 @@ export default function Studio() {
           const maxH = rect.height - 100;
           const newH = Math.max(minH, Math.min(maxH, rect.bottom - e.clientY));
           consoleBox.style.height = `${newH}px`;
-          if (editor) editor.refresh();
+          editorInstanceRef.current?.layout();
         });
 
-        const stopDragRow = (e) => {
+        const stopDragRow = (e: PointerEvent) => {
           if (!isDraggingRow) return;
           isDraggingRow = false;
           try {
@@ -730,7 +740,7 @@ export default function Studio() {
           } catch {}
           gutterRow.classList.remove("dragging");
           document.body.classList.remove("is-resizing-row");
-          if (editor) editor.refresh();
+          editorInstanceRef.current?.layout();
           if (consoleBox.offsetHeight >= 32) {
             localStorage.setItem("pixi_studio_console_height", String(consoleBox.offsetHeight));
           }
@@ -742,7 +752,7 @@ export default function Studio() {
         gutterRow.addEventListener("dblclick", () => {
           consoleBox.style.height = "130px";
           localStorage.removeItem("pixi_studio_console_height");
-          if (editor) editor.refresh();
+          editorInstanceRef.current?.layout();
         });
       }
     }
@@ -753,9 +763,10 @@ export default function Studio() {
     initAuth();
     initLibraryUI({
       onSelectPreset: (preset) => {
-        if (editor) {
+        const activeEditor = editorInstanceRef.current;
+        if (activeEditor) {
           currentPresetTitle = preset.title;
-          editor.setValue(preset.code);
+          activeEditor.setValue(preset.code);
           runUserCode();
           updateExportSummary();
           const badge = document.getElementById("active-preset-badge");
@@ -765,19 +776,15 @@ export default function Studio() {
           logMessage(`Preset "${preset.title}" loaded from library.`, "info");
         }
       },
-      getEditorCode: () => (editor ? editor.getValue() : ""),
+      getEditorCode: () => (editorInstanceRef.current ? editorInstanceRef.current.getValue() : ""),
     });
 
-    const checkCodeMirror = () => {
-      if (window.CodeMirror) {
-        initEditor();
-        runUserCode();
-      } else {
-        setTimeout(checkCodeMirror, 50);
-      }
-    };
+    runUserCodeRef.current = runUserCode;
 
-    checkCodeMirror();
+    // Si Monaco ya está montado, ejecuta la escena
+    if (editorInstanceRef.current) {
+      runUserCode();
+    }
 
     const onWindowResize = () => {
       const playgroundBody = document.getElementById("playground-body");
@@ -794,7 +801,7 @@ export default function Studio() {
           editorPane.style.width = `${maxW}px`;
         }
       }
-      if (editor) editor.refresh();
+      editorInstanceRef.current?.layout();
     };
     window.addEventListener("resize", onWindowResize);
 
@@ -1146,7 +1153,36 @@ export default function Studio() {
             </button>
           </div>
           <div className="editor-wrapper">
-            <textarea id="code-editor"></textarea>
+            <Editor
+              height="100%"
+              defaultLanguage="typescript"
+              language="typescript"
+              theme="vs-dark"
+              defaultValue={EXAMPLES["basic-shapes"] || EXAMPLES["flow-field"] || ""}
+              onMount={handleEditorDidMount}
+              options={{
+                fontSize: 13.5,
+                fontFamily: "'Fira Code', Menlo, Monaco, Consolas, monospace",
+                fontLigatures: true,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                lineNumbers: "on",
+                roundedSelection: true,
+                automaticLayout: true,
+                tabSize: 2,
+                wordWrap: "off",
+                cursorBlinking: "smooth",
+                smoothScrolling: true,
+                contextmenu: true,
+                formatOnPaste: true,
+                formatOnType: true,
+                bracketPairColorization: { enabled: true },
+                guides: {
+                  bracketPairs: true,
+                  indentation: true,
+                },
+              }}
+            />
           </div>
           <div
             id="gutter-vertical"
