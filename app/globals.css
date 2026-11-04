@@ -1368,44 +1368,45 @@ dialog.library-dialog[open] {
 .library-content-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 22px;
+  padding: 14px 18px;
 }
 
 .presets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .preset-card {
-  background: #131b2e;
-  border: 1px solid #202d44;
-  border-radius: 10px;
-  padding: 14px;
+  background: #111827;
+  border: 1px solid #1f293d;
+  border-radius: 8px;
+  padding: 9px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 7px;
   transition: all 0.18s ease;
+  position: relative;
 }
 
 .preset-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  border-color: #6366f1;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
   transform: translateY(-2px);
 }
 
 .preset-card-media {
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 6px;
+  border-radius: 5px;
   overflow: hidden;
-  background: #0b0f19;
+  background: #090d16;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
 }
 
 .preset-card-thumb {
@@ -1417,7 +1418,7 @@ dialog.library-dialog[open] {
 }
 
 .preset-card:hover .preset-card-thumb {
-  transform: scale(1.03);
+  transform: scale(1.04);
 }
 
 .preset-card-thumb-placeholder {
@@ -1425,22 +1426,209 @@ dialog.library-dialog[open] {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   color: #475569;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 500;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #0e1626 0%, #151d30 100%);
+  background: linear-gradient(135deg, #0c1220 0%, #151d30 100%);
+  user-select: none;
 }
 
 .preset-card-thumb-placeholder svg {
-  opacity: 0.6;
+  opacity: 0.5;
+}
+
+.preset-card-badge-overlay {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.preset-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.preset-tag.owner-tag {
+  background: rgba(99, 102, 241, 0.9);
+  color: #ffffff;
+  border: 1px solid rgba(165, 180, 252, 0.4);
+}
+
+.preset-tag.admin-tag {
+  background: rgba(217, 119, 6, 0.9);
+  color: #ffffff;
+  border: 1px solid rgba(253, 230, 138, 0.4);
+}
+
+.preset-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.preset-card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.25;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-card-desc {
+  font-size: 0.70rem;
+  color: #94a3b8;
+  line-height: 1.35;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.preset-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: auto;
+}
+
+.card-author-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.card-author-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.card-author-placeholder {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #334155;
+  color: #cbd5e1;
+  font-size: 0.60rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-author-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.card-author-name {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-date {
+  font-size: 0.60rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.card-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.btn-load-preset {
+  padding: 3px 8px;
+  height: 24px;
+  font-size: 0.70rem;
+  font-weight: 600;
+  gap: 4px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #4f46e5;
+  color: #ffffff;
+  border: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-load-preset:hover {
+  background: #4338ca;
+  color: #ffffff;
+}
+
+.card-manage-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.btn-icon-action {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: #182236;
+  border: 1px solid #28374d;
+  color: #94a3b8;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-icon-action:hover {
+  background: #23314c;
+  color: #f8fafc;
+}
+
+.btn-icon-action.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
 }
 
 .preset-thumb-preview-container {
   width: 100%;
-  max-width: 320px;
+  max-width: 300px;
   aspect-ratio: 16 / 9;
   border-radius: 6px;
   overflow: hidden;
@@ -1469,142 +1657,6 @@ dialog.library-dialog[open] {
   font-size: 0.75rem;
   padding: 16px;
   text-align: center;
-}
-
-.preset-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-author-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.card-author-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.card-author-placeholder {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #334155;
-  color: #cbd5e1;
-  font-size: 0.7rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.card-author-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-
-.card-author-name {
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
-.card-date {
-  font-size: 0.68rem;
-  color: #64748b;
-}
-
-.preset-tag {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  text-transform: uppercase;
-}
-
-.preset-tag.owner-tag {
-  background: rgba(99, 102, 241, 0.2);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.4);
-}
-
-.preset-tag.admin-tag {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.4);
-}
-
-.preset-card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.preset-card-title {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #f8fafc;
-  line-height: 1.3;
-}
-
-.preset-card-desc {
-  font-size: 0.78rem;
-  color: #94a3b8;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.preset-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid #1e293b;
-}
-
-.btn-load-preset {
-  flex: 1;
-}
-
-.card-manage-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.btn-icon-action {
-  background: #182236;
-  border: 1px solid #28374d;
-  color: #94a3b8;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.btn-icon-action:hover {
-  background: #23314c;
-  color: #f8fafc;
-}
-
-.btn-icon-action.danger:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.5);
-  color: #f87171;
 }
 
 .empty-library-state {
@@ -1999,5 +2051,60 @@ dialog.about-dialog {
   .user-card-pill {
     padding: 3px 6px 3px 3px;
     gap: 4px;
+  }
+
+  dialog.library-dialog {
+    width: 96vw;
+    max-height: 92vh;
+    border-radius: 10px;
+  }
+
+  .library-toolbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .search-input-wrapper {
+    min-width: 140px;
+  }
+
+  .library-content-scroll {
+    padding: 10px 10px;
+  }
+
+  .presets-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .preset-card {
+    padding: 7px;
+    gap: 5px;
+  }
+
+  .preset-card-title {
+    font-size: 0.76rem;
+  }
+
+  .preset-card-desc {
+    display: none;
+  }
+
+  .card-author-name {
+    max-width: 55px;
+  }
+
+  .card-date {
+    display: none;
+  }
+
+  .btn-load-preset span {
+    display: none;
+  }
+
+  .btn-load-preset {
+    padding: 0;
+    width: 24px;
+    height: 24px;
   }
 }

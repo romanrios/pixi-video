@@ -116,77 +116,82 @@ function renderPresets(): void {
 
       return `
         <article class="preset-card" data-id="${preset.id}">
-          <div class="preset-card-media">
+          <div class="preset-card-media" title="Click to load preset into editor">
             ${
               preset.thumbnailUrl
                 ? `<img src="${preset.thumbnailUrl}" alt="${escapeHtml(preset.title)}" class="preset-card-thumb" loading="lazy" />`
                 : `
                   <div class="preset-card-thumb-placeholder">
-                    <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none">
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                       <circle cx="8.5" cy="8.5" r="1.5"></circle>
                       <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
-                    <span>Interactive Preset</span>
+                    <span>Preset Preview</span>
                   </div>
                 `
             }
-          </div>
-
-          <div class="preset-card-header">
-            <div class="preset-card-author">
-              ${avatar}
-              <div class="author-details">
-                <span class="author-name">${escapeHtml(preset.userName)}</span>
-                <span class="preset-date">${formatDate(preset.createdAt)}</span>
-              </div>
-            </div>
-            ${badge}
+            ${badge ? `<div class="preset-card-badge-overlay">${badge}</div>` : ""}
           </div>
 
           <div class="preset-card-body">
-            <h3 class="preset-card-title">${escapeHtml(preset.title)}</h3>
-            <p class="preset-card-desc">${escapeHtml(preset.description || "Interactive PixiJS visual preset.")}</p>
-          </div>
-
-          <div class="preset-card-actions">
-            <button class="btn btn-primary btn-load-preset" data-id="${preset.id}">
-              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              <span>Load Preset</span>
-            </button>
-
+            <h3 class="preset-card-title" title="${escapeHtml(preset.title)}">${escapeHtml(preset.title)}</h3>
             ${
-              canManage
-                ? `
-              <div class="card-manage-actions">
-                <button class="btn-icon btn-edit-preset" data-id="${preset.id}" title="Edit Preset">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                  </svg>
-                </button>
-                <button class="btn-icon btn-delete-preset danger" data-id="${preset.id}" title="Delete Preset">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
-                </button>
-              </div>
-            `
+              preset.description
+                ? `<p class="preset-card-desc" title="${escapeHtml(preset.description)}">${escapeHtml(preset.description)}</p>`
                 : ""
             }
+          </div>
+
+          <div class="preset-card-footer">
+            <div class="card-author-info">
+              ${avatar}
+              <div class="card-author-text">
+                <span class="card-author-name" title="${escapeHtml(preset.userName)}">${escapeHtml(preset.userName)}</span>
+                <span class="card-date">${formatDate(preset.createdAt)}</span>
+              </div>
+            </div>
+
+            <div class="card-actions-group">
+              <button class="btn btn-primary btn-load-preset" data-id="${preset.id}" title="Load preset into editor">
+                <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.2" fill="none">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>Load</span>
+              </button>
+
+              ${
+                canManage
+                  ? `
+                <div class="card-manage-actions">
+                  <button class="btn-icon-action btn-edit-preset" data-id="${preset.id}" title="Edit Preset">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </button>
+                  <button class="btn-icon-action danger btn-delete-preset" data-id="${preset.id}" title="Delete Preset">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+              `
+                  : ""
+              }
+            </div>
           </div>
         </article>
       `;
     })
     .join("");
 
-  presetsGrid.querySelectorAll(".btn-load-preset").forEach((btnEl) => {
-    const btn = btnEl as HTMLElement;
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
+  presetsGrid.querySelectorAll(".btn-load-preset, .preset-card-media").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest(".card-manage-actions")) return;
+      const card = (el as HTMLElement).closest(".preset-card") as HTMLElement;
+      const id = card?.dataset.id || (el as HTMLElement).dataset.id;
       const found = allPresets.find((p) => p.id === id);
       if (found && onSelectPresetCallback) {
         onSelectPresetCallback(found);
