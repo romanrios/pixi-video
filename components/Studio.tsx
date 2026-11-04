@@ -227,7 +227,24 @@ export default function Studio() {
       updateExportSummary();
     }
 
-    function transformPixiImports(code) {
+    function applyCanvasStyles(canvas: HTMLCanvasElement, w: number, h: number) {
+      canvas.style.aspectRatio = `${w} / ${h}`;
+      canvas.style.maxWidth = "100%";
+      canvas.style.maxHeight = "100%";
+      canvas.style.width = "auto";
+      canvas.style.height = "auto";
+      canvas.style.objectFit = "contain";
+      canvas.style.display = "block";
+      canvas.style.position = "relative";
+      canvas.style.top = "auto";
+      canvas.style.left = "auto";
+      canvas.style.margin = "auto";
+      if (canvasContainer) {
+        canvasContainer.style.setProperty("--scene-aspect", `${w} / ${h}`);
+      }
+    }
+
+    function transformPixiImports(code: string) {
       // 1. Named imports with optional aliases: import { Application, Assets as MyAssets } from 'pixi.js'
       let transformed = code.replace(
         /import\s*\{([^}]+)\}\s*from\s*['"](?:@?pixi(?:\.js)?(?:\/[^'"]*)?)['"];?/g,
@@ -257,11 +274,11 @@ export default function Studio() {
 
       // 5. Ensure top-level async IIFE is awaited if present
       transformed = transformed.replace(
-        /(^|[\r\n;])\s*(?<!await\s*)\(\s*async\s*(\([^)]*\)|[a-zA-Z0-9_$]+)\s*=>/g,
+        /(^|[\r\n;])\s*(?<!await\s*)(?<!return\s*)\(\s*async\s*(\([^)]*\)|[a-zA-Z0-9_$]+)\s*=>/g,
         "$1\nawait (async $2 =>"
       );
       transformed = transformed.replace(
-        /(^|[\r\n;])\s*(?<!await\s*)\(\s*async\s+function/g,
+        /(^|[\r\n;])\s*(?<!await\s*)(?<!return\s*)\(\s*async\s+function/g,
         "$1\nawait (async function"
       );
 
@@ -271,6 +288,9 @@ export default function Studio() {
     async function runUserCode(width = currentWidth, height = currentHeight, forceStudioResolution = false) {
       clearLogs();
       logMessage(`Running PixiJS v8 code (${width}x${height})...`, "info");
+
+      // 0. Remove any rogue canvas elements attached directly under <body>
+      document.body.querySelectorAll(":scope > canvas").forEach((c) => c.remove());
 
       // 1. Clean up previous application instance and GPU pools
       if (app) {
@@ -312,9 +332,8 @@ export default function Studio() {
         window.app = defaultApp;
         if (canvasContainer) {
           canvasContainer.innerHTML = "";
-          defaultApp.canvas.style.aspectRatio = `${width} / ${height}`;
           canvasContainer.appendChild(defaultApp.canvas);
-          canvasContainer.style.setProperty("--scene-aspect", `${width} / ${height}`);
+          applyCanvasStyles(defaultApp.canvas, width, height);
         }
       }
 
@@ -354,8 +373,8 @@ export default function Studio() {
             updateResolutionUI(opts.width, opts.height);
           }
 
-          if (opts.autoDensity === undefined) opts.autoDensity = true;
-          if (opts.resolution === undefined) opts.resolution = 1;
+          opts.autoDensity = true;
+          opts.resolution = 1;
 
           // If defaultApp was created earlier, destroy it to release GPU resources
           if (defaultApp && defaultApp !== this) {
@@ -370,18 +389,10 @@ export default function Studio() {
             const activeWidth = opts.width || width;
             const activeHeight = opts.height || height;
 
-            if (this.canvas) {
-              this.canvas.style.aspectRatio = `${activeWidth} / ${activeHeight}`;
-              this.canvas.style.position = "relative";
-              this.canvas.style.top = "auto";
-              this.canvas.style.left = "auto";
-              this.canvas.style.margin = "auto";
-            }
-
             if (canvasContainer && this.canvas) {
               canvasContainer.innerHTML = "";
               canvasContainer.appendChild(this.canvas);
-              canvasContainer.style.setProperty("--scene-aspect", `${activeWidth} / ${activeHeight}`);
+              applyCanvasStyles(this.canvas, activeWidth, activeHeight);
             }
 
             // Hook renderer.resize to keep aspect ratio and canvasContainer in sync
@@ -390,10 +401,7 @@ export default function Studio() {
               this.renderer.resize = (newW: number, newH: number, res?: number) => {
                 origResize(newW, newH, res);
                 if (this.canvas) {
-                  this.canvas.style.aspectRatio = `${newW} / ${newH}`;
-                }
-                if (canvasContainer) {
-                  canvasContainer.style.setProperty("--scene-aspect", `${newW} / ${newH}`);
+                  applyCanvasStyles(this.canvas, newW, newH);
                 }
               };
             }
@@ -422,10 +430,63 @@ export default function Studio() {
         }
       }
 
+      // Virtual document that strictly directs canvas insertions to canvasContainer
+      const virtualDocument = new Proxy(document, {
+        get(target, prop, receiver) {
+          if (prop === "body") {
+            return new Proxy(document.body, {
+              get(bTarget, bProp, bReceiver) {
+                if (bProp === "appendChild") {
+                  return (child: Node) => {
+                    if (
+                      child instanceof HTMLCanvasElement ||
+                      (child as any)?.tagName === "CANVAS" ||
+                      (child as any)?.nodeName === "CANVAS"
+                    ) {
+                      if (canvasContainer) {
+                        if (!canvasContainer.contains(child)) {
+                          canvasContainer.innerHTML = "";
+                          canvasContainer.appendChild(child);
+                        }
+                        applyCanvasStyles(child as HTMLCanvasElement, currentWidth, currentHeight);
+                      }
+                      return child;
+                    }
+                    return bTarget.appendChild(child);
+                  };
+                }
+                return Reflect.get(bTarget, bProp, bReceiver);
+              },
+            });
+          }
+          if (prop === "getElementById") {
+            return (id: string) => {
+              if (id === "canvas-container" || id === "app") {
+                return canvasContainer;
+              }
+              return target.getElementById(id);
+            };
+          }
+          if (prop === "querySelector") {
+            return (selector: string) => {
+              if (selector === "#canvas-container" || selector === "#app") {
+                return canvasContainer;
+              }
+              if (selector === "body") {
+                return virtualDocument.body;
+              }
+              return target.querySelector(selector);
+            };
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      });
+
       // Safe virtual window that mirrors scene resolution
       const resizeListeners = new Set<() => void>();
       const virtualWindow = new Proxy(window, {
         get(target, prop, receiver) {
+          if (prop === "document") return virtualDocument;
           if (prop === "innerWidth") return currentWidth;
           if (prop === "innerHeight") return currentHeight;
           if (prop === "outerWidth") return currentWidth;
@@ -479,23 +540,6 @@ export default function Studio() {
       window.Matrix = PIXI.Matrix;
       window.Ticker = PIXI.Ticker;
 
-      // Intercept document.body.appendChild so document.body.appendChild(app.canvas) goes to canvasContainer
-      const originalAppendChild = document.body.appendChild.bind(document.body);
-      document.body.appendChild = function (node) {
-        if (
-          node instanceof HTMLCanvasElement ||
-          (userCreatedApp && node === userCreatedApp.canvas) ||
-          (app && node === app.canvas)
-        ) {
-          if (canvasContainer && !canvasContainer.contains(node)) {
-            canvasContainer.innerHTML = "";
-            canvasContainer.appendChild(node);
-          }
-          return node;
-        }
-        return originalAppendChild(node);
-      };
-
       try {
         const jsCode = await transpileTypeScript(monacoRef.current, editorInstanceRef.current, rawCode);
         const transformedCode = transformPixiImports(jsCode);
@@ -508,17 +552,18 @@ export default function Studio() {
         };
 
         const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
-        // Shadow window, innerWidth, innerHeight so user code accesses scene dimensions
+        // Pass virtual document & window so document.body.appendChild routes directly to canvasContainer
         const runFn = new AsyncFunction(
           "PIXI",
           "console",
           "window",
+          "document",
           "innerWidth",
           "innerHeight",
           transformedCode
         );
 
-        await runFn(pixiProxy, customConsole, virtualWindow, currentWidth, currentHeight);
+        await runFn(pixiProxy, customConsole, virtualWindow, virtualDocument, currentWidth, currentHeight);
 
         if (userCreatedApp) {
           if (userCreatedApp._initPromise) {
@@ -542,7 +587,6 @@ export default function Studio() {
         console.error(err);
         logMessage(err.message || String(err), "error");
       } finally {
-        document.body.appendChild = originalAppendChild;
         window.PIXI = PIXI;
         window.Application = RealApplication;
       }
