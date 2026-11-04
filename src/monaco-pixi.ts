@@ -20,14 +20,21 @@ export function configureMonaco(monaco: any): void {
   monaco.languages.typescript.javascriptDefaults.setCompilerOptions(compilerOptions);
 
   // 2. Configurar diagnósticos y validación en tiempo real (subrayados de error)
+  // Ignoramos advertencias de top-level await en archivos que no tienen imports explícitos
   monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
     noSemanticValidation: false,
     noSyntaxValidation: false,
+    diagnosticCodesToIgnore: [
+      1375, // 'await' expressions are only allowed at the top level of a file when that file is a module
+      1378, // Top-level 'await' expressions are only allowed when the 'module' option is set to 'esnext'
+      2691, // An import path cannot end with a '.js' extension
+    ],
   });
 
   monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
     noSemanticValidation: false,
     noSyntaxValidation: false,
+    diagnosticCodesToIgnore: [1375, 1378, 2691],
   });
 
   // 3. Declaraciones de tipos para PixiJS v8 en el editor
@@ -191,14 +198,10 @@ export function configureMonaco(monaco: any): void {
     }
   `;
 
-  monaco.languages.typescript.typescriptDefaults.addExtraLib(
-    pixiTypeDeclarations,
-    "ts:filename/pixi.d.ts"
-  );
-  monaco.languages.typescript.javascriptDefaults.addExtraLib(
-    pixiTypeDeclarations,
-    "ts:filename/pixi.d.ts"
-  );
+  const pixiTypeDefPath = "file:///node_modules/@types/pixi.js/index.d.ts";
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(pixiTypeDeclarations, pixiTypeDefPath);
+  monaco.languages.typescript.javascriptDefaults.addExtraLib(pixiTypeDeclarations, pixiTypeDefPath);
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(pixiTypeDeclarations, "ts:pixi.d.ts");
 }
 
 /**
@@ -209,6 +212,8 @@ export async function transpileTypeScript(
   editor: any,
   rawCode: string
 ): Promise<string> {
+  if (!rawCode || !rawCode.trim()) return rawCode;
+
   try {
     if (monaco && editor) {
       const model = editor.getModel();
@@ -221,8 +226,8 @@ export async function transpileTypeScript(
         }
       }
     }
-  } catch (err) {
-    console.warn("Monaco worker transpile fallback, using raw code:", err);
+  } catch {
+    // Si el worker aún no cargó el modelo o el archivo es JS estándar, continuar con rawCode
   }
   return rawCode;
 }

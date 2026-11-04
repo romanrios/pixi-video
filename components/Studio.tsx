@@ -1155,6 +1155,7 @@ export default function Studio() {
           <div className="editor-wrapper">
             <Editor
               height="100%"
+              path="scene.ts"
               defaultLanguage="typescript"
               language="typescript"
               theme="vs-dark"
