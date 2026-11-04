@@ -6,7 +6,8 @@ import type { User } from "@/types/auth";
 export async function POST(request: NextRequest) {
   try {
     await ensureDbInitialized();
-    const { credential } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const credential = body?.credential;
     if (!credential) {
       return NextResponse.json(
         { error: "Missing Google authentication credential." },
