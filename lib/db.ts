@@ -45,11 +45,19 @@ export async function ensureDbInitialized() {
         user_name TEXT NOT NULL,
         user_email TEXT NOT NULL,
         user_picture TEXT,
+        thumbnail_url TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
+
+    // Migración para bases de datos existentes: agregar columna thumbnail_url si no existe
+    try {
+      await db.execute("ALTER TABLE presets ADD COLUMN thumbnail_url TEXT;");
+    } catch {
+      // Ignorar si la columna ya existe
+    }
 
     // 3. Usuario administrador inicial
     const adminEmail = (process.env.ADMIN_EMAILS || "romanrios1234@gmail.com").toLowerCase().trim();
@@ -89,8 +97,8 @@ export async function ensureDbInitialized() {
       if (existing.rows.length === 0) {
         await db.execute({
           sql: `
-            INSERT INTO presets (id, title, description, code, user_id, user_name, user_email, user_picture)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO presets (id, title, description, code, user_id, user_name, user_email, user_picture, thumbnail_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           args: [
             seed.id,
@@ -101,6 +109,7 @@ export async function ensureDbInitialized() {
             "Román Ríos",
             adminEmail,
             "https://lh3.googleusercontent.com/a/ACg8ocKclIU5Jcpd1-5eNQMC_N9QHfFaxHFe60qCnwRF78-y1SmgFyDbmg=s96-c",
+            seed.thumbnailUrl || null,
           ],
         });
       } else {

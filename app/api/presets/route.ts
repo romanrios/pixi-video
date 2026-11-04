@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import crypto from "crypto";
 import { db, ensureDbInitialized } from "@/lib/db";
 import { getUserFromRequest, isUserAdmin } from "@/lib/auth";
+import { uploadThumbnailToCloudinary } from "@/lib/cloudinary";
 import type { Preset } from "@/types/preset";
 
 /**
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
         user_name, 
         user_email, 
         user_picture, 
+        thumbnail_url,
         created_at, 
         updated_at
       FROM presets
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
       userName: String(row.user_name),
       userEmail: String(row.user_email),
       userPicture: row.user_picture ? String(row.user_picture) : null,
+      thumbnailUrl: row.thumbnail_url ? String(row.thumbnail_url) : null,
       createdAt: String(row.created_at),
       updatedAt: String(row.updated_at),
       canManage: Boolean(isAdmin || (currentUser && currentUser.id === String(row.user_id))),
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, description, code } = await request.json();
+    const { title, description, code, thumbnail } = await request.json();
 
     if (!title || !title.trim()) {
       return NextResponse.json(
@@ -89,10 +92,16 @@ export async function POST(request: NextRequest) {
 
     const id = `preset-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
 
+    // Subir thumbnail a Cloudinary si se proporcionó una captura en base64
+    let thumbnailUrl: string | null = null;
+    if (thumbnail && typeof thumbnail === "string") {
+      thumbnailUrl = await uploadThumbnailToCloudinary(thumbnail, id);
+    }
+
     await db.execute({
       sql: `
-        INSERT INTO presets (id, title, description, code, user_id, user_name, user_email, user_picture)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO presets (id, title, description, code, user_id, user_name, user_email, user_picture, thumbnail_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         id,
@@ -103,6 +112,7 @@ export async function POST(request: NextRequest) {
         currentUser.name,
         currentUser.email,
         currentUser.picture || "",
+        thumbnailUrl,
       ],
     });
 

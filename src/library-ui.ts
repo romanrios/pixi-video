@@ -7,7 +7,25 @@ let currentFilter: "all" | "mine" = "all";
 let searchQuery = "";
 let onSelectPresetCallback: ((preset: Preset) => void) | null = null;
 let getEditorCodeCallback: (() => string) | null = null;
+let getCanvasThumbnailCallback: (() => Promise<string | null> | string | null) | null = null;
 let editingPresetId: string | null = null;
+let currentThumbnailData: string | null = null;
+
+function updateThumbnailPreview(dataUrl: string | null): void {
+  const previewImg = document.getElementById("preset-thumb-preview-img") as HTMLImageElement | null;
+  const previewEmpty = document.getElementById("preset-thumb-preview-empty");
+  if (previewImg && previewEmpty) {
+    if (dataUrl) {
+      previewImg.src = dataUrl;
+      previewImg.style.display = "block";
+      previewEmpty.style.display = "none";
+    } else {
+      previewImg.removeAttribute("src");
+      previewImg.style.display = "none";
+      previewEmpty.style.display = "flex";
+    }
+  }
+}
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
@@ -98,6 +116,23 @@ function renderPresets(): void {
 
       return `
         <article class="preset-card" data-id="${preset.id}">
+          <div class="preset-card-media">
+            ${
+              preset.thumbnailUrl
+                ? `<img src="${preset.thumbnailUrl}" alt="${escapeHtml(preset.title)}" class="preset-card-thumb" loading="lazy" />`
+                : `
+                  <div class="preset-card-thumb-placeholder">
+                    <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>Interactive Preset</span>
+                  </div>
+                `
+            }
+          </div>
+
           <div class="preset-card-header">
             <div class="preset-card-author">
               ${avatar}
@@ -219,7 +254,7 @@ export async function openLibraryModal(): Promise<void> {
 /**
  * Abre el modal para guardar o publicar el código actual del editor.
  */
-export function openCreatePresetModal(): void {
+export async function openCreatePresetModal(): Promise<void> {
   const user = getCurrentUser();
   if (!user) {
     alert("You must sign in with Google to publish a preset to the library.");
@@ -240,6 +275,9 @@ export function openCreatePresetModal(): void {
   const presetCodePreview = document.getElementById("preset-code-preview");
 
   editingPresetId = null;
+  currentThumbnailData = null;
+  updateThumbnailPreview(null);
+
   if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = "Publish Preset to Library";
   if (btnSubmitPresetEditor) {
     const span = btnSubmitPresetEditor.querySelector("span");
@@ -249,6 +287,16 @@ export function openCreatePresetModal(): void {
   if (presetDescInput) presetDescInput.value = "";
   if (presetCodePreview) presetCodePreview.textContent = code;
 
+  // Generar automáticamente el snapshot del canvas en vivo
+  if (getCanvasThumbnailCallback) {
+    try {
+      currentThumbnailData = await getCanvasThumbnailCallback();
+      updateThumbnailPreview(currentThumbnailData);
+    } catch (err) {
+      console.warn("Could not capture thumbnail snapshot:", err);
+    }
+  }
+
   if (presetEditorModal) {
     presetEditorModal.showModal();
   }
@@ -257,7 +305,7 @@ export function openCreatePresetModal(): void {
 /**
  * Abre el modal para editar un preset existente.
  */
-function openEditPresetModal(preset: Preset): void {
+async function openEditPresetModal(preset: Preset): Promise<void> {
   const presetEditorModal = document.getElementById("preset-editor-modal") as HTMLDialogElement | null;
   const presetEditorTitleHeading = document.getElementById("preset-editor-title-heading");
   const btnSubmitPresetEditor = document.getElementById("btn-submit-preset-editor");
@@ -266,6 +314,9 @@ function openEditPresetModal(preset: Preset): void {
   const presetCodePreview = document.getElementById("preset-code-preview");
 
   editingPresetId = preset.id;
+  currentThumbnailData = preset.thumbnailUrl || null;
+  updateThumbnailPreview(currentThumbnailData);
+
   if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = `Edit Preset: ${preset.title}`;
   if (btnSubmitPresetEditor) {
     const span = btnSubmitPresetEditor.querySelector("span");
@@ -274,6 +325,17 @@ function openEditPresetModal(preset: Preset): void {
   if (presetTitleInput) presetTitleInput.value = preset.title;
   if (presetDescInput) presetDescInput.value = preset.description || "";
   if (presetCodePreview) presetCodePreview.textContent = preset.code;
+
+  // Capturar frame actual si está activo en el canvas
+  if (getCanvasThumbnailCallback) {
+    try {
+      const liveThumb = await getCanvasThumbnailCallback();
+      if (liveThumb) {
+        currentThumbnailData = liveThumb;
+        updateThumbnailPreview(currentThumbnailData);
+      }
+    } catch {}
+  }
 
   if (presetEditorModal) {
     presetEditorModal.showModal();
@@ -286,12 +348,15 @@ function openEditPresetModal(preset: Preset): void {
 export function initLibraryUI({
   onSelectPreset,
   getEditorCode,
+  getCanvasThumbnail,
 }: {
   onSelectPreset?: (preset: Preset) => void;
   getEditorCode?: () => string;
+  getCanvasThumbnail?: () => Promise<string | null> | string | null;
 }): void {
   onSelectPresetCallback = onSelectPreset || null;
   getEditorCodeCallback = getEditorCode || null;
+  getCanvasThumbnailCallback = getCanvasThumbnail || null;
 
   const libraryModal = document.getElementById("library-modal") as HTMLDialogElement | null;
   const btnCloseLibrary = document.getElementById("btn-close-library");
@@ -365,12 +430,24 @@ export function initLibraryUI({
     }
 
     try {
-      if (btnSubmitPresetEditor) btnSubmitPresetEditor.disabled = true;
+      if (btnSubmitPresetEditor) {
+        btnSubmitPresetEditor.disabled = true;
+        const span = btnSubmitPresetEditor.querySelector("span");
+        if (span) span.textContent = "Saving & Uploading...";
+      }
+
+      // Asegurar que capturamos el snapshot actual si no se generó previamente
+      let thumbnail = currentThumbnailData;
+      if (!thumbnail && getCanvasThumbnailCallback) {
+        try {
+          thumbnail = await getCanvasThumbnailCallback();
+        } catch {}
+      }
 
       if (editingPresetId) {
-        await updatePreset(editingPresetId, { title, description, code });
+        await updatePreset(editingPresetId, { title, description, code, thumbnail });
       } else {
-        await createPreset({ title, description, code });
+        await createPreset({ title, description, code, thumbnail });
       }
 
       presetEditorModal?.close();
@@ -380,7 +457,11 @@ export function initLibraryUI({
       console.error(err);
       alert(`Error saving preset: ${err.message}`);
     } finally {
-      if (btnSubmitPresetEditor) btnSubmitPresetEditor.disabled = false;
+      if (btnSubmitPresetEditor) {
+        btnSubmitPresetEditor.disabled = false;
+        const span = btnSubmitPresetEditor.querySelector("span");
+        if (span) span.textContent = editingPresetId ? "Save Changes" : "Publish to Library";
+      }
     }
   });
 

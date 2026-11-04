@@ -1395,6 +1395,82 @@ dialog.library-dialog[open] {
   transform: translateY(-2px);
 }
 
+.preset-card-media {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0b0f19;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.preset-card-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.preset-card:hover .preset-card-thumb {
+  transform: scale(1.03);
+}
+
+.preset-card-thumb-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 500;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0e1626 0%, #151d30 100%);
+}
+
+.preset-card-thumb-placeholder svg {
+  opacity: 0.6;
+}
+
+.preset-thumb-preview-container {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0b0f19;
+  border: 1px solid #202d44;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.preset-thumb-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preset-thumb-preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.75rem;
+  padding: 16px;
+  text-align: center;
+}
+
 .preset-card-header {
   display: flex;
   justify-content: space-between;

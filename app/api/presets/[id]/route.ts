@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db, ensureDbInitialized } from "@/lib/db";
 import { getUserFromRequest, isUserAdmin } from "@/lib/auth";
+import { uploadThumbnailToCloudinary, deleteThumbnailFromCloudinary } from "@/lib/cloudinary";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         userName: String(row.user_name),
         userEmail: String(row.user_email),
         userPicture: row.user_picture ? String(row.user_picture) : null,
+        thumbnailUrl: row.thumbnail_url ? String(row.thumbnail_url) : null,
         createdAt: String(row.created_at),
         updatedAt: String(row.updated_at),
         canManage: Boolean(isAdmin || (currentUser && currentUser.id === String(row.user_id))),
@@ -87,7 +89,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const { title, description, code } = await request.json();
+    const { title, description, code, thumbnail } = await request.json();
 
     if (!title || !title.trim()) {
       return NextResponse.json({ error: "Title is required." }, { status: 400 });
@@ -96,13 +98,21 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Code is required." }, { status: 400 });
     }
 
+    let thumbnailUrl = preset.thumbnail_url ? String(preset.thumbnail_url) : null;
+    if (thumbnail && typeof thumbnail === "string") {
+      const uploaded = await uploadThumbnailToCloudinary(thumbnail, id);
+      if (uploaded) {
+        thumbnailUrl = uploaded;
+      }
+    }
+
     await db.execute({
       sql: `
         UPDATE presets
-        SET title = ?, description = ?, code = ?, updated_at = CURRENT_TIMESTAMP
+        SET title = ?, description = ?, code = ?, thumbnail_url = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
-      args: [title.trim(), (description || "").trim(), code, id],
+      args: [title.trim(), (description || "").trim(), code, thumbnailUrl, id],
     });
 
     return NextResponse.json({
@@ -156,6 +166,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         { status: 403 }
       );
     }
+
+    // Intentar eliminar el thumbnail de Cloudinary
+    await deleteThumbnailFromCloudinary(id);
 
     await db.execute({
       sql: "DELETE FROM presets WHERE id = ?",

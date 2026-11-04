@@ -71,20 +71,20 @@ export async function fetchPresets(): Promise<Preset[]> {
   return data.presets || [];
 }
 
-export async function createPreset({ title, description, code }: PresetCreateInput): Promise<any> {
+export async function createPreset({ title, description, code, thumbnail }: PresetCreateInput): Promise<any> {
   const res = await fetch("/api/presets", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, description, code }),
+    body: JSON.stringify({ title, description, code, thumbnail }),
   });
   return await parseResponse(res, "Error publishing preset.");
 }
 
-export async function updatePreset(id: string, { title, description, code }: PresetUpdateInput): Promise<any> {
+export async function updatePreset(id: string, { title, description, code, thumbnail }: PresetUpdateInput): Promise<any> {
   const res = await fetch(`/api/presets/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, description, code }),
+    body: JSON.stringify({ title, description, code, thumbnail }),
   });
   return await parseResponse(res, "Error updating preset.");
 }

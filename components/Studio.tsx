@@ -883,6 +883,69 @@ export default function Studio() {
       }
     }
 
+    async function captureSceneThumbnail(): Promise<string | null> {
+      try {
+        const activeApp = app || (window as any).app;
+        if (!activeApp) return null;
+
+        // Force synchronous render to ensure buffer has the latest scene graphics
+        if (activeApp.renderer && activeApp.stage) {
+          try {
+            activeApp.renderer.render(activeApp.stage);
+          } catch {}
+        }
+
+        let sourceCanvas: HTMLCanvasElement | null = null;
+
+        // PixiJS v8 ExtractSystem
+        if (activeApp.renderer?.extract) {
+          try {
+            sourceCanvas = (activeApp.renderer.extract as any).canvas(activeApp.stage);
+          } catch (err) {
+            console.warn("Pixi extract.canvas failed, falling back to canvas:", err);
+          }
+        }
+
+        if (!sourceCanvas && activeApp.canvas) {
+          sourceCanvas = activeApp.canvas as HTMLCanvasElement;
+        }
+
+        if (!sourceCanvas && canvasContainer) {
+          sourceCanvas = canvasContainer.querySelector("canvas") || null;
+        }
+
+        if (!sourceCanvas || sourceCanvas.width === 0 || sourceCanvas.height === 0) {
+          return null;
+        }
+
+        // Scaled down to lightweight thumbnail resolution (max 480px)
+        const maxDim = 480;
+        let w = sourceCanvas.width;
+        let h = sourceCanvas.height;
+        if (w > maxDim || h > maxDim) {
+          if (w >= h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+
+        const thumbCanvas = document.createElement("canvas");
+        thumbCanvas.width = Math.max(w, 2);
+        thumbCanvas.height = Math.max(h, 2);
+        const ctx = thumbCanvas.getContext("2d");
+        if (!ctx) return null;
+
+        ctx.drawImage(sourceCanvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+        return thumbCanvas.toDataURL("image/webp", 0.75);
+      } catch (err) {
+        console.error("Error capturing scene thumbnail:", err);
+        return null;
+      }
+    }
+
     setupEventListeners();
     setupSplitters();
     updateExportSummary();
@@ -903,6 +966,7 @@ export default function Studio() {
         }
       },
       getEditorCode: () => (editorInstanceRef.current ? editorInstanceRef.current.getValue() : ""),
+      getCanvasThumbnail: captureSceneThumbnail,
     });
 
     runUserCodeRef.current = runUserCode;
@@ -1643,6 +1707,26 @@ export default function Studio() {
         </div>
 
         <form id="preset-editor-form" className="modal-form" method="dialog">
+          <div className="form-field">
+            <label>Auto-Generated Snapshot</label>
+            <div id="preset-thumb-preview-container" className="preset-thumb-preview-container">
+              <img
+                id="preset-thumb-preview-img"
+                alt="Preset Thumbnail Preview"
+                className="preset-thumb-preview-img"
+                style={{ display: "none" }}
+              />
+              <div id="preset-thumb-preview-empty" className="preset-thumb-preview-empty">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <span>Snapshot captured automatically from canvas</span>
+              </div>
+            </div>
+          </div>
+
           <div className="form-field">
             <label htmlFor="preset-title-input">Preset Title *</label>
             <input type="text" id="preset-title-input" className="form-input" placeholder="e.g. Spiral Galaxy with Particles" required maxLength={80} />
