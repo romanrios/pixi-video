@@ -27,7 +27,7 @@ export default function Studio() {
     setViewMode(mode);
     try {
       localStorage.setItem("pixi_studio_view_mode", mode);
-    } catch {}
+    } catch { }
     setTimeout(() => {
       editorInstanceRef.current?.layout();
       window.dispatchEvent(new Event("resize"));
@@ -75,7 +75,7 @@ export default function Studio() {
       if (savedMode === "code" || savedMode === "preview" || savedMode === "split") {
         setViewMode(savedMode);
       }
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -306,7 +306,7 @@ export default function Studio() {
       try {
         PIXI.TexturePool?.clear();
         PIXI.Assets?.reset();
-      } catch {}
+      } catch { }
 
       currentWidth = width;
       currentHeight = height;
@@ -381,7 +381,7 @@ export default function Studio() {
             try {
               defaultApp.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });
               defaultApp = null;
-            } catch {}
+            } catch { }
           }
 
           const initPromise = (async () => {
@@ -809,7 +809,7 @@ export default function Studio() {
           isDraggingCol = false;
           try {
             gutterCol.releasePointerCapture(e.pointerId);
-          } catch {}
+          } catch { }
           gutterCol.classList.remove("dragging");
           document.body.classList.remove("is-resizing-col");
           editorInstanceRef.current?.layout();
@@ -863,7 +863,7 @@ export default function Studio() {
           isDraggingRow = false;
           try {
             gutterRow.releasePointerCapture(e.pointerId);
-          } catch {}
+          } catch { }
           gutterRow.classList.remove("dragging");
           document.body.classList.remove("is-resizing-row");
           editorInstanceRef.current?.layout();
@@ -1076,7 +1076,7 @@ export default function Studio() {
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                       <line x1="12" y1="3" x2="12" y2="21"></line>
                     </svg>
-                    <span>Split View</span>
+                    <span>Split</span>
                     <span className="menu-shortcut">Alt+1</span>
                   </button>
 
@@ -1094,7 +1094,7 @@ export default function Studio() {
                       <polyline points="16 18 22 12 16 6"></polyline>
                       <polyline points="8 6 2 12 8 18"></polyline>
                     </svg>
-                    <span>Code Only</span>
+                    <span>Code</span>
                     <span className="menu-shortcut">Alt+2</span>
                   </button>
 
@@ -1112,7 +1112,7 @@ export default function Studio() {
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
-                    <span>Preview Only</span>
+                    <span>Preview</span>
                     <span className="menu-shortcut">Alt+3</span>
                   </button>
                 </div>
@@ -1193,7 +1193,7 @@ export default function Studio() {
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="12" y1="3" x2="12" y2="21"></line>
                 </svg>
-                <span>Split View</span>
+                <span>Split</span>
                 <span className="menu-shortcut">Alt+1</span>
               </button>
 
@@ -1210,7 +1210,7 @@ export default function Studio() {
                   <polyline points="16 18 22 12 16 6"></polyline>
                   <polyline points="8 6 2 12 8 18"></polyline>
                 </svg>
-                <span>Code Only</span>
+                <span>Code</span>
                 <span className="menu-shortcut">Alt+2</span>
               </button>
 
@@ -1227,7 +1227,7 @@ export default function Studio() {
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
                 </svg>
-                <span>Preview Only</span>
+                <span>Preview</span>
                 <span className="menu-shortcut">Alt+3</span>
               </button>
             </div>

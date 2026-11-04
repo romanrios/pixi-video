@@ -341,6 +341,7 @@ textarea {
     pointer-events: auto;
     transform: translateX(0) scale(1);
   }
+
   .submenu-wrapper:hover .chevron-sub {
     color: #cbd5e1;
   }
@@ -468,7 +469,7 @@ textarea {
   background: #080c14;
 }
 
-/* View Modes (Split / Code Only / Preview Only) */
+/* View Modes (Split / Code / Preview) */
 .playground-body.view-code .editor-pane {
   width: 100% !important;
   max-width: 100% !important;
@@ -1810,7 +1811,7 @@ dialog.about-dialog {
     font-size: 0.75rem;
   }
 
-  .pane-header-title > span:first-child {
+  .pane-header-title>span:first-child {
     max-width: 135px;
     overflow: hidden;
     text-overflow: ellipsis;
