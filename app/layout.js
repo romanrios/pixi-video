@@ -2,7 +2,7 @@ import "./globals.css";
 import Script from "next/script";
 
 export const metadata = {
-  title: "Pixi.js v8 Creative Studio & Video Exporter",
+  title: "Pixi Video",
   description: "Creative coding playground in PixiJS v8 with MP4 video exporter and community preset library",
   icons: {
     icon: "/favicon.svg",

@@ -589,6 +589,7 @@ export default function Studio() {
       const playgroundBody = document.getElementById("playground-body");
       const editorPane = document.getElementById("editor-pane");
       if (
+        window.innerWidth > 768 &&
         playgroundBody &&
         editorPane &&
         !playgroundBody.classList.contains("view-code") &&
@@ -803,7 +804,7 @@ export default function Studio() {
                 }}
               >
                 <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3"></circle>
+                  <circle cx="12" cy="12" r="10"></circle>
                   <line x1="12" y1="16" x2="12" y2="12"></line>
                   <line x1="12" y1="8" x2="12.01" y2="8"></line>
                 </svg>
@@ -929,20 +930,25 @@ export default function Studio() {
         <section className="editor-pane" id="editor-pane">
           <div className="pane-header">
             <div className="pane-header-title">
-              <span>JS Code Editor (PixiJS v8)</span>
+              <span className="pane-title-icon" title="JS Code Editor (PixiJS v8)">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+              </span>
               <span id="active-preset-badge" className="active-preset-badge">
                 Basic Shapes
               </span>
             </div>
             <button
               id="btn-run"
-              className="btn btn-primary btn-sm"
+              className="btn btn-primary btn-sm btn-run-editor"
               title="Run code on canvas (Ctrl + Enter)"
             >
               <svg className="btn-icon" viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
-              <span>Run (Ctrl+Enter)</span>
+              <span>Run</span>
             </button>
           </div>
           <div className="editor-wrapper">
@@ -971,7 +977,12 @@ export default function Studio() {
 
         <section className="preview-pane" id="preview-pane">
           <div className="pane-header">
-            <span>Preview & Canvas</span>
+            <span className="pane-title-icon" title="Preview & Canvas">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </span>
             <div className="status-tags">
               <select
                 id="preview-res-select"

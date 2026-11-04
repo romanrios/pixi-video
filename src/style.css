@@ -595,6 +595,19 @@ body.is-resizing-row * {
   user-select: none;
 }
 
+.pane-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pane-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #818cf8;
+}
+
 .status-tags {
   display: flex;
   gap: 8px;
@@ -725,9 +738,12 @@ dialog.modal-dialog {
   padding: 0;
   max-width: 540px;
   width: 92vw;
+  max-height: 90vh;
+  max-height: 90dvh;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75);
   margin: auto;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Scroll containment per modern web guidance */
@@ -1644,6 +1660,111 @@ dialog.about-dialog {
 }
 
 /* Responsividad */
+@media (max-width: 768px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  #app {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  /* Preview debajo del código y consola en mobile */
+  .playground-body {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 58px);
+    min-height: calc(100dvh - 58px);
+    overflow: visible;
+  }
+
+  .editor-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto;
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .editor-wrapper {
+    height: 330px;
+    min-height: 220px;
+  }
+
+  .gutter-col {
+    display: none !important;
+  }
+
+  .console-box {
+    height: 120px;
+    min-height: 32px;
+  }
+
+  .preview-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto;
+    min-height: 360px;
+    flex: none;
+  }
+
+  .canvas-container {
+    min-height: 300px;
+    height: 52vh;
+    max-height: 480px;
+    padding: 12px;
+  }
+
+  /* Modos de vista en mobile */
+  .playground-body.view-code {
+    height: calc(100vh - 58px);
+    height: calc(100dvh - 58px);
+    overflow: hidden;
+  }
+
+  .playground-body.view-code .editor-pane {
+    height: 100% !important;
+    flex: 1 1 100% !important;
+    border-bottom: none;
+  }
+
+  .playground-body.view-code .editor-wrapper {
+    flex: 1;
+    height: auto;
+  }
+
+  .playground-body.view-preview {
+    height: calc(100vh - 58px);
+    height: calc(100dvh - 58px);
+    overflow: hidden;
+  }
+
+  .playground-body.view-preview .preview-pane {
+    height: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .playground-body.view-preview .canvas-container {
+    height: 100%;
+    max-height: 100%;
+  }
+}
+
 @media (max-width: 640px) {
   .options-submenu {
     position: static;
@@ -1677,6 +1798,33 @@ dialog.about-dialog {
   }
 
   .control-divider {
+    display: none;
+  }
+
+  .pane-header {
+    padding: 6px 10px;
+  }
+
+  .pane-header-title {
+    gap: 6px;
+    font-size: 0.75rem;
+  }
+
+  .pane-header-title > span:first-child {
+    max-width: 135px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .active-preset-badge {
+    max-width: 85px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-shortcut-hint {
     display: none;
   }
 }
