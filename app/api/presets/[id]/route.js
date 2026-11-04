@@ -21,7 +21,7 @@ export async function GET(request, context) {
     }
 
     const row = result.rows[0];
-    const currentUser = getUserFromRequest(request);
+    const currentUser = await getUserFromRequest(request);
     const isAdmin = isUserAdmin(currentUser);
 
     return NextResponse.json({
@@ -55,7 +55,7 @@ export async function PUT(request, context) {
     const params = await context.params;
     const { id } = params;
 
-    const currentUser = getUserFromRequest(request);
+    const currentUser = await getUserFromRequest(request);
     if (!currentUser) {
       return NextResponse.json(
         { error: "You must sign in to edit a preset." },
@@ -126,7 +126,7 @@ export async function DELETE(request, context) {
     const params = await context.params;
     const { id } = params;
 
-    const currentUser = getUserFromRequest(request);
+    const currentUser = await getUserFromRequest(request);
     if (!currentUser) {
       return NextResponse.json(
         { error: "You must sign in to delete a preset." },

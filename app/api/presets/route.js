@@ -27,7 +27,7 @@ export async function GET(request) {
       ORDER BY datetime(created_at) DESC
     `);
 
-    const currentUser = getUserFromRequest(request);
+    const currentUser = await getUserFromRequest(request);
     const isAdmin = isUserAdmin(currentUser);
 
     const presets = result.rows.map((row) => ({
@@ -63,7 +63,7 @@ export async function POST(request) {
   try {
     await ensureDbInitialized();
 
-    const currentUser = getUserFromRequest(request);
+    const currentUser = await getUserFromRequest(request);
     if (!currentUser) {
       return NextResponse.json(
         { error: "You must sign in with Google to publish a preset." },
