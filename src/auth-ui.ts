@@ -73,34 +73,53 @@ function renderNavbarAuth() {
   } else {
     container.innerHTML = `
       <div id="google-btn-wrapper" class="google-btn-wrapper">
-        <div id="google-btn-slot"></div>
+        <div id="google-btn-desktop" class="google-btn-desktop"></div>
+        <div id="google-btn-mobile" class="google-btn-mobile"></div>
       </div>
     `;
     setupGoogleButton();
   }
 }
 
+let resizeListenerAttached = false;
+
 /**
  * Espera a que el script de Google Identity Services esté disponible y monta el botón.
  */
 function setupGoogleButton() {
-  const slot = document.getElementById("google-btn-slot");
-  if (!slot || currentUser) return;
+  if (currentUser) return;
+  const desktopSlot = document.getElementById("google-btn-desktop");
+  const mobileSlot = document.getElementById("google-btn-mobile");
+  if (!desktopSlot && !mobileSlot) return;
 
   if (window.google?.accounts?.id && window.__googleClientId) {
     try {
-      console.info(
-        `%c[Google Auth] Mounting sign-in button.\n• Current origin: "${window.location.origin}"\n• If you see a 403 "The given origin is not allowed" error, add this exact origin in Google Cloud Console > Credentials > Your Client ID > Authorized JavaScript origins.`,
-        "color: #38bdf8; font-weight: bold;"
-      );
+      if (desktopSlot && !desktopSlot.hasChildNodes()) {
+        window.google.accounts.id.renderButton(desktopSlot, {
+          type: "standard",
+          theme: "filled_blue",
+          size: "medium",
+          shape: "pill",
+          text: "signin_with",
+          locale: "en",
+        });
+      }
 
-      window.google.accounts.id.renderButton(slot, {
-        theme: "filled_blue",
-        size: "medium",
-        shape: "pill",
-        text: "signin_with",
-        locale: "en",
-      });
+      if (mobileSlot && !mobileSlot.hasChildNodes()) {
+        window.google.accounts.id.renderButton(mobileSlot, {
+          type: "icon",
+          theme: "filled_blue",
+          size: "medium",
+          shape: "circle",
+        });
+      }
+
+      if (!resizeListenerAttached && typeof window !== "undefined") {
+        resizeListenerAttached = true;
+        window.matchMedia("(max-width: 640px)").addEventListener("change", () => {
+          setupGoogleButton();
+        });
+      }
     } catch (e) {
       console.warn("Could not render Google button:", e);
     }

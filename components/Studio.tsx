@@ -1247,7 +1247,8 @@ export default function Studio() {
 
           <div id="user-profile-area" className="user-profile-area">
             <div id="google-btn-wrapper" className="google-btn-wrapper">
-              <div id="google-btn-slot"></div>
+              <div id="google-btn-desktop" className="google-btn-desktop"></div>
+              <div id="google-btn-mobile" className="google-btn-mobile"></div>
             </div>
           </div>
         </div>

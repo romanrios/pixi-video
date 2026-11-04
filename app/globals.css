@@ -1151,6 +1151,15 @@ dialog.progress-dialog {
   min-height: 34px;
 }
 
+.google-btn-desktop {
+  display: flex;
+  align-items: center;
+}
+
+.google-btn-mobile {
+  display: none;
+}
+
 .user-card-pill {
   display: inline-flex;
   align-items: center;
@@ -1875,5 +1884,26 @@ dialog.about-dialog {
 
   .btn-shortcut-hint {
     display: none;
+  }
+
+  .google-btn-desktop {
+    display: none !important;
+  }
+
+  .google-btn-mobile {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .user-info-text {
+    display: none !important;
+  }
+
+  .user-card-pill {
+    padding: 3px 6px 3px 3px;
+    gap: 4px;
   }
 }
