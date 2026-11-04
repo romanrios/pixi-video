@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import crypto from "crypto";
-import { db, ensureDbInitialized } from "@/lib/db.js";
-import { getUserFromRequest, isUserAdmin } from "@/lib/auth.js";
+import { db, ensureDbInitialized } from "@/lib/db";
+import { getUserFromRequest, isUserAdmin } from "@/lib/auth";
+import type { Preset } from "@/types/preset";
 
 /**
  * GET /api/presets
  * Obtener todos los presets comunitarios.
  */
-export async function GET(request) {
+export async function GET(request: NextRequest) {
   try {
     await ensureDbInitialized();
 
@@ -30,23 +31,23 @@ export async function GET(request) {
     const currentUser = await getUserFromRequest(request);
     const isAdmin = isUserAdmin(currentUser);
 
-    const presets = result.rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      code: row.code,
-      userId: row.user_id,
-      userName: row.user_name,
-      userEmail: row.user_email,
-      userPicture: row.user_picture,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      canManage: Boolean(isAdmin || (currentUser && currentUser.id === row.user_id)),
-      isOwner: Boolean(currentUser && currentUser.id === row.user_id),
+    const presets: Preset[] = result.rows.map((row: any) => ({
+      id: String(row.id),
+      title: String(row.title),
+      description: row.description ? String(row.description) : "",
+      code: String(row.code),
+      userId: String(row.user_id),
+      userName: String(row.user_name),
+      userEmail: String(row.user_email),
+      userPicture: row.user_picture ? String(row.user_picture) : null,
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at),
+      canManage: Boolean(isAdmin || (currentUser && currentUser.id === String(row.user_id))),
+      isOwner: Boolean(currentUser && currentUser.id === String(row.user_id)),
     }));
 
     return NextResponse.json({ presets });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error fetching presets in Next.js:", err);
     return NextResponse.json(
       { error: "Failed to load preset library." },
@@ -59,7 +60,7 @@ export async function GET(request) {
  * POST /api/presets
  * Publish a new preset.
  */
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     await ensureDbInitialized();
 
@@ -113,7 +114,7 @@ export async function POST(request) {
       },
       { status: 201 }
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error publishing preset in Next.js:", err);
     return NextResponse.json(
       { error: `Error saving preset: ${err.message}` },

@@ -1,9 +1,11 @@
-import { createClient } from "@libsql/client";
-import { PRESETS_DATA } from "./presets-data.js";
+import { createClient, type Client } from "@libsql/client";
+import { PRESETS_DATA } from "./presets-data";
 
-const globalForDb = globalThis;
+const globalForDb = globalThis as unknown as {
+  tursoClient?: Client;
+};
 
-export const db =
+export const db: Client =
   globalForDb.tursoClient ||
   createClient({
     url: process.env.TURSO_DATABASE_URL || "",

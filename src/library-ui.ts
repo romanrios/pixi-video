@@ -1,14 +1,15 @@
-import { fetchPresets, createPreset, updatePreset, deletePreset } from "./api.js";
-import { getCurrentUser } from "./auth-ui.js";
+import { fetchPresets, createPreset, updatePreset, deletePreset } from "./api";
+import { getCurrentUser } from "./auth-ui";
+import type { Preset } from "@/types/preset";
 
-let allPresets = [];
-let currentFilter = "all"; // 'all' | 'mine'
+let allPresets: Preset[] = [];
+let currentFilter: "all" | "mine" = "all";
 let searchQuery = "";
-let onSelectPresetCallback = null;
-let getEditorCodeCallback = null;
-let editingPresetId = null;
+let onSelectPresetCallback: ((preset: Preset) => void) | null = null;
+let getEditorCodeCallback: (() => string) | null = null;
+let editingPresetId: string | null = null;
 
-function formatDate(dateString) {
+function formatDate(dateString?: string): string {
   if (!dateString) return "";
   try {
     const date = new Date(dateString);
@@ -23,7 +24,7 @@ function formatDate(dateString) {
   }
 }
 
-function escapeHtml(str) {
+function escapeHtml(str?: string | null): string {
   if (!str) return "";
   return String(str)
     .replace(/&/g, "&amp;")
@@ -35,10 +36,10 @@ function escapeHtml(str) {
 /**
  * Filtra y renderiza los presets en la grilla.
  */
-function renderPresets() {
+function renderPresets(): void {
   const presetsGrid = document.getElementById("presets-grid");
   const libraryCountBadge = document.getElementById("library-count-badge");
-  const libraryModal = document.getElementById("library-modal");
+  const libraryModal = document.getElementById("library-modal") as HTMLDialogElement | null;
   if (!presetsGrid) return;
 
   const user = getCurrentUser();
@@ -98,11 +99,11 @@ function renderPresets() {
       return `
         <article class="preset-card" data-id="${preset.id}">
           <div class="preset-card-header">
-            <div class="card-author-info">
+            <div class="preset-card-author">
               ${avatar}
-              <div class="card-author-text">
-                <span class="card-author-name">${escapeHtml(preset.userName)}</span>
-                <span class="card-date">${formatDate(preset.createdAt)}</span>
+              <div class="author-details">
+                <span class="author-name">${escapeHtml(preset.userName)}</span>
+                <span class="preset-date">${formatDate(preset.createdAt)}</span>
               </div>
             </div>
             ${badge}
@@ -110,35 +111,35 @@ function renderPresets() {
 
           <div class="preset-card-body">
             <h3 class="preset-card-title">${escapeHtml(preset.title)}</h3>
-            <p class="preset-card-desc">${escapeHtml(preset.description || "Interactive PixiJS v8 visual effect")}</p>
+            <p class="preset-card-desc">${escapeHtml(preset.description || "Interactive PixiJS visual preset.")}</p>
           </div>
 
-          <div class="preset-card-footer">
-            <button type="button" class="btn btn-primary btn-sm btn-load-preset" data-id="${preset.id}">
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+          <div class="preset-card-actions">
+            <button class="btn btn-primary btn-load-preset" data-id="${preset.id}">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
-              <span>Load into Editor</span>
+              <span>Load Preset</span>
             </button>
 
             ${
               canManage
                 ? `
-                <div class="card-manage-actions">
-                  <button type="button" class="btn-icon-action btn-edit-preset" data-id="${preset.id}" title="Edit this preset">
-                    <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
-                  </button>
-                  <button type="button" class="btn-icon-action btn-delete-preset danger" data-id="${preset.id}" title="Delete this preset">
-                    <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
-                  </button>
-                </div>
-              `
+              <div class="card-manage-actions">
+                <button class="btn-icon btn-edit-preset" data-id="${preset.id}" title="Edit Preset">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
+                <button class="btn-icon btn-delete-preset danger" data-id="${preset.id}" title="Delete Preset">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            `
                 : ""
             }
           </div>
@@ -147,7 +148,8 @@ function renderPresets() {
     })
     .join("");
 
-  presetsGrid.querySelectorAll(".btn-load-preset").forEach((btn) => {
+  presetsGrid.querySelectorAll(".btn-load-preset").forEach((btnEl) => {
+    const btn = btnEl as HTMLElement;
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
       const found = allPresets.find((p) => p.id === id);
@@ -158,7 +160,8 @@ function renderPresets() {
     });
   });
 
-  presetsGrid.querySelectorAll(".btn-edit-preset").forEach((btn) => {
+  presetsGrid.querySelectorAll(".btn-edit-preset").forEach((btnEl) => {
+    const btn = btnEl as HTMLElement;
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
       const found = allPresets.find((p) => p.id === id);
@@ -168,7 +171,8 @@ function renderPresets() {
     });
   });
 
-  presetsGrid.querySelectorAll(".btn-delete-preset").forEach((btn) => {
+  presetsGrid.querySelectorAll(".btn-delete-preset").forEach((btnEl) => {
+    const btn = btnEl as HTMLElement;
     btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
       const found = allPresets.find((p) => p.id === id);
@@ -180,11 +184,9 @@ function renderPresets() {
       if (!confirmDelete) return;
 
       try {
-        await deletePreset(id);
-        allPresets = allPresets.filter((p) => p.id !== id);
-        renderPresets();
-      } catch (err) {
-        console.error("Error deleting preset:", err);
+        await deletePreset(found.id);
+        await loadLibraryPresets();
+      } catch (err: any) {
         alert(`Error deleting preset: ${err.message}`);
       }
     });
@@ -192,22 +194,22 @@ function renderPresets() {
 }
 
 /**
- * Carga los presets de la API.
+ * Carga los presets desde la API del backend.
  */
-export async function loadLibraryPresets() {
+export async function loadLibraryPresets(): Promise<void> {
   try {
     allPresets = await fetchPresets();
     renderPresets();
   } catch (err) {
-    console.error("Error loading presets:", err);
+    console.warn("Could not load presets library from API:", err);
   }
 }
 
 /**
  * Abre el modal de la biblioteca.
  */
-export async function openLibraryModal() {
-  const libraryModal = document.getElementById("library-modal");
+export async function openLibraryModal(): Promise<void> {
+  const libraryModal = document.getElementById("library-modal") as HTMLDialogElement | null;
   await loadLibraryPresets();
   if (libraryModal) {
     libraryModal.showModal();
@@ -217,7 +219,7 @@ export async function openLibraryModal() {
 /**
  * Abre el modal para guardar o publicar el código actual del editor.
  */
-export function openCreatePresetModal() {
+export function openCreatePresetModal(): void {
   const user = getCurrentUser();
   if (!user) {
     alert("You must sign in with Google to publish a preset to the library.");
@@ -230,16 +232,19 @@ export function openCreatePresetModal() {
     return;
   }
 
-  const presetEditorModal = document.getElementById("preset-editor-modal");
+  const presetEditorModal = document.getElementById("preset-editor-modal") as HTMLDialogElement | null;
   const presetEditorTitleHeading = document.getElementById("preset-editor-title-heading");
   const btnSubmitPresetEditor = document.getElementById("btn-submit-preset-editor");
-  const presetTitleInput = document.getElementById("preset-title-input");
-  const presetDescInput = document.getElementById("preset-desc-input");
+  const presetTitleInput = document.getElementById("preset-title-input") as HTMLInputElement | null;
+  const presetDescInput = document.getElementById("preset-desc-input") as HTMLTextAreaElement | null;
   const presetCodePreview = document.getElementById("preset-code-preview");
 
   editingPresetId = null;
   if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = "Publish Preset to Library";
-  if (btnSubmitPresetEditor) btnSubmitPresetEditor.querySelector("span").textContent = "Publish to Library";
+  if (btnSubmitPresetEditor) {
+    const span = btnSubmitPresetEditor.querySelector("span");
+    if (span) span.textContent = "Publish to Library";
+  }
   if (presetTitleInput) presetTitleInput.value = "";
   if (presetDescInput) presetDescInput.value = "";
   if (presetCodePreview) presetCodePreview.textContent = code;
@@ -252,17 +257,20 @@ export function openCreatePresetModal() {
 /**
  * Abre el modal para editar un preset existente.
  */
-function openEditPresetModal(preset) {
-  const presetEditorModal = document.getElementById("preset-editor-modal");
+function openEditPresetModal(preset: Preset): void {
+  const presetEditorModal = document.getElementById("preset-editor-modal") as HTMLDialogElement | null;
   const presetEditorTitleHeading = document.getElementById("preset-editor-title-heading");
   const btnSubmitPresetEditor = document.getElementById("btn-submit-preset-editor");
-  const presetTitleInput = document.getElementById("preset-title-input");
-  const presetDescInput = document.getElementById("preset-desc-input");
+  const presetTitleInput = document.getElementById("preset-title-input") as HTMLInputElement | null;
+  const presetDescInput = document.getElementById("preset-desc-input") as HTMLTextAreaElement | null;
   const presetCodePreview = document.getElementById("preset-code-preview");
 
   editingPresetId = preset.id;
   if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = `Edit Preset: ${preset.title}`;
-  if (btnSubmitPresetEditor) btnSubmitPresetEditor.querySelector("span").textContent = "Save Changes";
+  if (btnSubmitPresetEditor) {
+    const span = btnSubmitPresetEditor.querySelector("span");
+    if (span) span.textContent = "Save Changes";
+  }
   if (presetTitleInput) presetTitleInput.value = preset.title;
   if (presetDescInput) presetDescInput.value = preset.description || "";
   if (presetCodePreview) presetCodePreview.textContent = preset.code;
@@ -275,26 +283,32 @@ function openEditPresetModal(preset) {
 /**
  * Inicialización de eventos de la biblioteca y modal de presets.
  */
-export function initLibraryUI({ onSelectPreset, getEditorCode }) {
-  onSelectPresetCallback = onSelectPreset;
-  getEditorCodeCallback = getEditorCode;
+export function initLibraryUI({
+  onSelectPreset,
+  getEditorCode,
+}: {
+  onSelectPreset?: (preset: Preset) => void;
+  getEditorCode?: () => string;
+}): void {
+  onSelectPresetCallback = onSelectPreset || null;
+  getEditorCodeCallback = getEditorCode || null;
 
-  const libraryModal = document.getElementById("library-modal");
+  const libraryModal = document.getElementById("library-modal") as HTMLDialogElement | null;
   const btnCloseLibrary = document.getElementById("btn-close-library");
   const btnOpenLibrary = document.getElementById("btn-open-library");
   const btnOpenSavePreset = document.getElementById("btn-open-save-preset");
-  const librarySearchInput = document.getElementById("library-search-input");
+  const librarySearchInput = document.getElementById("library-search-input") as HTMLInputElement | null;
   const filterAllBtn = document.getElementById("filter-all-btn");
   const filterMineBtn = document.getElementById("filter-mine-btn");
 
-  const presetEditorModal = document.getElementById("preset-editor-modal");
+  const presetEditorModal = document.getElementById("preset-editor-modal") as HTMLDialogElement | null;
   const btnClosePresetEditor = document.getElementById("btn-close-preset-editor");
   const btnCancelPresetEditor = document.getElementById("btn-cancel-preset-editor");
   const presetEditorForm = document.getElementById("preset-editor-form");
-  const presetTitleInput = document.getElementById("preset-title-input");
-  const presetDescInput = document.getElementById("preset-desc-input");
+  const presetTitleInput = document.getElementById("preset-title-input") as HTMLInputElement | null;
+  const presetDescInput = document.getElementById("preset-desc-input") as HTMLTextAreaElement | null;
   const presetCodePreview = document.getElementById("preset-code-preview");
-  const btnSubmitPresetEditor = document.getElementById("btn-submit-preset-editor");
+  const btnSubmitPresetEditor = document.getElementById("btn-submit-preset-editor") as HTMLButtonElement | null;
 
   // Apertura y cierre de la biblioteca
   btnOpenLibrary?.addEventListener("click", openLibraryModal);
@@ -309,7 +323,7 @@ export function initLibraryUI({ onSelectPreset, getEditorCode }) {
 
   // Búsqueda en vivo
   librarySearchInput?.addEventListener("input", (e) => {
-    searchQuery = e.target.value;
+    searchQuery = (e.target as HTMLInputElement).value;
     renderPresets();
   });
 
@@ -362,7 +376,7 @@ export function initLibraryUI({ onSelectPreset, getEditorCode }) {
       presetEditorModal?.close();
       await loadLibraryPresets();
       libraryModal?.showModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       alert(`Error saving preset: ${err.message}`);
     } finally {

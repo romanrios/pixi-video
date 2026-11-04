@@ -1,15 +1,18 @@
-import { NextResponse } from "next/server";
-import { db, ensureDbInitialized } from "@/lib/db.js";
-import { getUserFromRequest, isUserAdmin } from "@/lib/auth.js";
+import { NextResponse, type NextRequest } from "next/server";
+import { db, ensureDbInitialized } from "@/lib/db";
+import { getUserFromRequest, isUserAdmin } from "@/lib/auth";
+
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
 
 /**
  * GET /api/presets/[id]
  */
-export async function GET(request, context) {
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
     await ensureDbInitialized();
-    const params = await context.params;
-    const { id } = params;
+    const { id } = await context.params;
 
     const result = await db.execute({
       sql: "SELECT * FROM presets WHERE id = ?",
@@ -20,26 +23,26 @@ export async function GET(request, context) {
       return NextResponse.json({ error: "Preset not found." }, { status: 404 });
     }
 
-    const row = result.rows[0];
+    const row: any = result.rows[0];
     const currentUser = await getUserFromRequest(request);
     const isAdmin = isUserAdmin(currentUser);
 
     return NextResponse.json({
       preset: {
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        code: row.code,
-        userId: row.user_id,
-        userName: row.user_name,
-        userEmail: row.user_email,
-        userPicture: row.user_picture,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        canManage: Boolean(isAdmin || (currentUser && currentUser.id === row.user_id)),
+        id: String(row.id),
+        title: String(row.title),
+        description: row.description ? String(row.description) : "",
+        code: String(row.code),
+        userId: String(row.user_id),
+        userName: String(row.user_name),
+        userEmail: String(row.user_email),
+        userPicture: row.user_picture ? String(row.user_picture) : null,
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at),
+        canManage: Boolean(isAdmin || (currentUser && currentUser.id === String(row.user_id))),
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error fetching preset:", err);
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
@@ -49,11 +52,10 @@ export async function GET(request, context) {
  * PUT /api/presets/[id]
  * Only allowed for the preset creator or a global admin.
  */
-export async function PUT(request, context) {
+export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     await ensureDbInitialized();
-    const params = await context.params;
-    const { id } = params;
+    const { id } = await context.params;
 
     const currentUser = await getUserFromRequest(request);
     if (!currentUser) {
@@ -72,7 +74,7 @@ export async function PUT(request, context) {
       return NextResponse.json({ error: "The preset to edit does not exist." }, { status: 404 });
     }
 
-    const preset = check.rows[0];
+    const preset: any = check.rows[0];
     const isAdmin = isUserAdmin(currentUser);
 
     if (!isAdmin && preset.user_id !== currentUser.id) {
@@ -107,7 +109,7 @@ export async function PUT(request, context) {
       success: true,
       message: "Preset updated successfully.",
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error updating preset in Next.js:", err);
     return NextResponse.json(
       { error: `Error updating preset: ${err.message}` },
@@ -120,11 +122,10 @@ export async function PUT(request, context) {
  * DELETE /api/presets/[id]
  * Only allowed for the preset creator or a global admin.
  */
-export async function DELETE(request, context) {
+export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     await ensureDbInitialized();
-    const params = await context.params;
-    const { id } = params;
+    const { id } = await context.params;
 
     const currentUser = await getUserFromRequest(request);
     if (!currentUser) {
@@ -143,7 +144,7 @@ export async function DELETE(request, context) {
       return NextResponse.json({ error: "The preset to delete does not exist." }, { status: 404 });
     }
 
-    const preset = check.rows[0];
+    const preset: any = check.rows[0];
     const isAdmin = isUserAdmin(currentUser);
 
     if (!isAdmin && preset.user_id !== currentUser.id) {
@@ -165,7 +166,7 @@ export async function DELETE(request, context) {
       success: true,
       message: "Preset deleted from the library.",
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error deleting preset in Next.js:", err);
     return NextResponse.json(
       { error: `Error deleting preset: ${err.message}` },

@@ -1,6 +1,6 @@
-import { PRESETS_DATA } from "../lib/presets-data.js";
+import { PRESETS_DATA } from "../lib/presets-data";
 
-export const EXAMPLES = {
+export const EXAMPLES: Record<string, string> = {
   "basic-shapes": PRESETS_DATA.find((p) => p.id === "basic-shapes-preset")?.code || "",
   "moving-shapes": PRESETS_DATA.find((p) => p.id === "moving-shapes-preset")?.code || "",
   "bouncing-balls": PRESETS_DATA.find((p) => p.id === "bouncing-balls-preset")?.code || "",

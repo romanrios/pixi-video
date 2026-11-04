@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import * as PIXI from "pixi.js";
-import { EXAMPLES } from "../src/examples.js";
-import { exportDeterministicVideo, downloadBlob } from "../src/recorder.js";
-import { initAuth } from "../src/auth-ui.js";
-import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/library-ui.js";
+import { EXAMPLES } from "../src/examples";
+import { exportDeterministicVideo, downloadBlob } from "../src/recorder";
+import type { VideoQuality } from "@/types/recorder";
+import { initAuth } from "../src/auth-ui";
+import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/library-ui";
 
 export default function Studio() {
   const containerRef = useRef(null);
@@ -29,7 +30,7 @@ export default function Studio() {
   }, []);
 
   const openAboutModal = () => {
-    const modal = document.getElementById("about-modal");
+    const modal = document.getElementById("about-modal") as HTMLDialogElement | null;
     modal?.showModal();
   };
 
@@ -109,28 +110,28 @@ export default function Studio() {
     const fpsCounter = document.getElementById("fps-counter");
 
     // Modal de Grabación
-    const recordModal = document.getElementById("record-modal");
+    const recordModal = document.getElementById("record-modal") as HTMLDialogElement | null;
     const btnCloseRecordModal = document.getElementById("btn-close-record-modal");
     const btnCancelRecord = document.getElementById("btn-cancel-record");
-    const recordForm = document.getElementById("record-form");
-    const modalExportDuration = document.getElementById("modal-export-duration");
+    const recordForm = document.getElementById("record-form") as HTMLFormElement | null;
+    const modalExportDuration = document.getElementById("modal-export-duration") as HTMLSelectElement | null;
     const durationPills = document.getElementById("duration-pills");
-    const modalExportFps = document.getElementById("modal-export-fps");
-    const modalExportQuality = document.getElementById("modal-export-quality");
-    const modalExportFilename = document.getElementById("modal-export-filename");
+    const modalExportFps = document.getElementById("modal-export-fps") as HTMLSelectElement | null;
+    const modalExportQuality = document.getElementById("modal-export-quality") as HTMLSelectElement | null;
+    const modalExportFilename = document.getElementById("modal-export-filename") as HTMLInputElement | null;
     const summaryFrames = document.getElementById("summary-frames");
     const summaryRes = document.getElementById("summary-res");
 
     // Modal de Resolución Personalizada
-    const customResModal = document.getElementById("custom-res-modal");
-    const customResForm = document.getElementById("custom-res-form");
-    const customWidthInput = document.getElementById("custom-width-input");
-    const customHeightInput = document.getElementById("custom-height-input");
+    const customResModal = document.getElementById("custom-res-modal") as HTMLDialogElement | null;
+    const customResForm = document.getElementById("custom-res-form") as HTMLFormElement | null;
+    const customWidthInput = document.getElementById("custom-width-input") as HTMLInputElement | null;
+    const customHeightInput = document.getElementById("custom-height-input") as HTMLInputElement | null;
     const btnCloseCustomRes = document.getElementById("btn-close-custom-res");
     const btnCancelCustomRes = document.getElementById("btn-cancel-custom-res");
 
     // Modal de Progreso
-    const progressModal = document.getElementById("progress-modal");
+    const progressModal = document.getElementById("progress-modal") as HTMLDialogElement | null;
     const exportProgressBar = document.getElementById("export-progress-bar");
     const exportProgressText = document.getElementById("export-progress-text");
     const exportProgressPercent = document.getElementById("export-progress-percent");
@@ -297,17 +298,18 @@ export default function Studio() {
       }
 
       // 3. Setup Interception for official examples (new Application(), app.init(), document.body.appendChild)
-      let userCreatedApp = null;
+      let userCreatedApp: any = null;
       const RealApplication = PIXI.Application;
 
       class InterceptedApplication extends RealApplication {
-        constructor(...args) {
+        _initPromise: Promise<any> | null = null;
+        constructor(...args: any[]) {
           super(...args);
           userCreatedApp = this;
           this._initPromise = null;
         }
 
-        async init(options = {}) {
+        async init(options: any = {}) {
           const opts = { ...options };
           // Handle resizeTo: window (from official examples) or fallback to studio resolution
           if (opts.resizeTo === window || opts.resizeTo === document.body) {
@@ -433,7 +435,7 @@ export default function Studio() {
       const { width, height } = getSelectedResolution();
       const durationSec = parseFloat(modalExportDuration?.value || "5") || 5;
       const fps = parseInt(modalExportFps?.value || "60", 10) || 60;
-      const quality = modalExportQuality?.value || "very-high";
+      const quality = (modalExportQuality?.value || "very-high") as VideoQuality;
       const customName = modalExportFilename?.value.trim() || "";
       const presetSlug = (currentPresetTitle || "animation")
         .toLowerCase()
@@ -539,10 +541,10 @@ export default function Studio() {
 
       // Selector de resolución en la barra del preview
       resSelect?.addEventListener("change", (e) => {
-        const val = e.target.value;
+        const val = (e.target as HTMLSelectElement).value;
         if (val === "custom") {
-          if (customWidthInput) customWidthInput.value = currentWidth;
-          if (customHeightInput) customHeightInput.value = currentHeight;
+          if (customWidthInput) customWidthInput.value = String(currentWidth);
+          if (customHeightInput) customHeightInput.value = String(currentHeight);
           customResModal?.showModal();
         } else {
           previousResValue = val;
@@ -574,7 +576,7 @@ export default function Studio() {
         if (customOpt) {
           customOpt.textContent = `Custom (${w}x${h})`;
         }
-        if (resSelect) resSelect.value = "custom";
+        if (resSelect) (resSelect as HTMLSelectElement).value = "custom";
 
         customResModal?.close();
         runUserCode(w, h);
@@ -586,13 +588,14 @@ export default function Studio() {
 
       customResModal?.addEventListener("close", () => {
         if (resSelect && previousResValue !== "custom") {
-          resSelect.value = previousResValue;
+          (resSelect as HTMLSelectElement).value = previousResValue;
         }
       });
 
       modalExportDuration?.addEventListener("input", () => {
         const val = parseFloat(modalExportDuration.value);
-        durationPills?.querySelectorAll(".pill").forEach((pill) => {
+        durationPills?.querySelectorAll(".pill").forEach((pillEl) => {
+          const pill = pillEl as HTMLElement;
           pill.classList.toggle("active", parseFloat(pill.dataset.val || "0") === val);
         });
         updateExportSummary();
@@ -601,21 +604,22 @@ export default function Studio() {
       modalExportFps?.addEventListener("change", updateExportSummary);
 
       durationPills?.addEventListener("click", (e) => {
-        const pill = e.target.closest(".pill");
+        const target = e.target as HTMLElement | null;
+        const pill = target?.closest(".pill") as HTMLElement | null;
         if (!pill) return;
         durationPills.querySelectorAll(".pill").forEach((p) => p.classList.remove("active"));
         pill.classList.add("active");
-        if (modalExportDuration) modalExportDuration.value = pill.dataset.val;
+        if (modalExportDuration && pill.dataset.val) modalExportDuration.value = pill.dataset.val;
         updateExportSummary();
       });
 
       // Light-dismiss fallback
       if (!("closedBy" in HTMLDialogElement.prototype)) {
-        const outside = (e, dialog) => {
+        const outside = (e: PointerEvent, dialog: HTMLDialogElement) => {
           const r = dialog.getBoundingClientRect();
           return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
         };
-        for (const dialog of document.querySelectorAll('dialog[closedby="any"]')) {
+        for (const dialog of document.querySelectorAll<HTMLDialogElement>('dialog[closedby="any"]')) {
           let pressedOutside = false;
           dialog.addEventListener("pointerdown", (e) => {
             pressedOutside = outside(e, dialog);
@@ -1410,7 +1414,7 @@ export default function Studio() {
             id="btn-close-library"
             className="modal-close-btn"
             aria-label="Close modal"
-            onClick={() => document.getElementById("library-modal")?.close()}
+            onClick={() => (document.getElementById("library-modal") as HTMLDialogElement)?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1465,7 +1469,7 @@ export default function Studio() {
             id="btn-close-preset-editor"
             className="modal-close-btn"
             aria-label="Close modal"
-            onClick={() => document.getElementById("preset-editor-modal")?.close()}
+            onClick={() => (document.getElementById("preset-editor-modal") as HTMLDialogElement)?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1497,7 +1501,7 @@ export default function Studio() {
               type="button"
               id="btn-cancel-preset-editor"
               className="btn btn-secondary"
-              onClick={() => document.getElementById("preset-editor-modal")?.close()}
+              onClick={() => (document.getElementById("preset-editor-modal") as HTMLDialogElement)?.close()}
             >
               Cancel
             </button>
@@ -1519,7 +1523,7 @@ export default function Studio() {
             id="btn-close-about-modal"
             className="modal-close-btn"
             aria-label="Close modal"
-            onClick={() => document.getElementById("about-modal")?.close()}
+            onClick={() => (document.getElementById("about-modal") as HTMLDialogElement)?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
               <line x1="18" y1="6" x2="6" y2="18"></line>

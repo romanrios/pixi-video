@@ -1,13 +1,15 @@
-import { fetchAuthConfig, fetchCurrentUser, loginWithGoogleCredential, logoutUser } from "./api.js";
+/// <reference path="../types/global.d.ts" />
+import { fetchAuthConfig, fetchCurrentUser, loginWithGoogleCredential, logoutUser } from "./api";
+import type { User } from "@/types/auth";
 
-let currentUser = null;
-const listeners = [];
+let currentUser: User | null = null;
+const listeners: Array<(user: User | null) => void> = [];
 
-export function getCurrentUser() {
+export function getCurrentUser(): User | null {
   return currentUser;
 }
 
-export function onAuthChange(fn) {
+export function onAuthChange(fn: (user: User | null) => void): void {
   listeners.push(fn);
   fn(currentUser);
 }

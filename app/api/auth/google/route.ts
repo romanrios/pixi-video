@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
-import { db, ensureDbInitialized } from "@/lib/db.js";
-import { verifyGoogleIdToken, createSessionToken } from "@/lib/auth.js";
+import { NextResponse, type NextRequest } from "next/server";
+import { db, ensureDbInitialized } from "@/lib/db";
+import { verifyGoogleIdToken, createSessionToken } from "@/lib/auth";
+import type { User } from "@/types/auth";
 
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     await ensureDbInitialized();
     const { credential } = await request.json();
@@ -22,14 +23,14 @@ export async function POST(request) {
       args: [normalizedEmail],
     });
 
-    let activeUser = null;
+    let activeUser: User;
 
     if (existing.rows.length > 0) {
       const existingUser = existing.rows[0];
       // Actualizar datos del perfil manteniendo el ID existente (preservando integridad referencial)
       await db.execute({
         sql: "UPDATE users SET name = ?, picture = ?, role = ? WHERE id = ?",
-        args: [googleUser.name, googleUser.picture, googleUser.role, existingUser.id],
+        args: [googleUser.name, googleUser.picture || null, googleUser.role, String(existingUser.id)],
       });
 
       activeUser = {
@@ -51,7 +52,7 @@ export async function POST(request) {
           googleUser.id,
           googleUser.email,
           googleUser.name,
-          googleUser.picture,
+          googleUser.picture || null,
           googleUser.role,
         ],
       });
@@ -82,7 +83,7 @@ export async function POST(request) {
     });
 
     return response;
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error authenticating with Google in Next.js:", err);
     return NextResponse.json(
       { error: `Authentication error: ${err.message}` },

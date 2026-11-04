@@ -1,7 +1,9 @@
 import "./globals.css";
+import React from "react";
 import Script from "next/script";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Pixi Video",
   description: "Creative coding playground in PixiJS v8 with MP4 video exporter and community preset library",
   icons: {
@@ -9,7 +11,7 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>

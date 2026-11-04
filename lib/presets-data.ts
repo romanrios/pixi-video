@@ -1,4 +1,6 @@
-export const PRESETS_DATA = [
+import type { PresetSeed } from "@/types/preset";
+
+export const PRESETS_DATA: PresetSeed[] = [
   {
     id: "basic-shapes-preset",
     title: "Basic Shapes (Drawing 101)",

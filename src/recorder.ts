@@ -5,8 +5,9 @@ import {
   CanvasSource,
   Quality,
 } from "mediabunny";
+import type { ExportVideoOptions, VideoQuality } from "@/types/recorder";
 
-const QUALITY_MAP = {
+const QUALITY_MAP: Record<VideoQuality, Quality> = {
   "very-high": new Quality("very-high"),
   high: new Quality("high"),
   medium: new Quality("medium"),
@@ -14,16 +15,6 @@ const QUALITY_MAP = {
 
 /**
  * Graba la escena de Pixi de forma determinista cuadro a cuadro a una tasa de FPS fija.
- *
- * @param {object} options
- * @param {import('pixi.js').Application} options.app - Instancia de PixiJS v8
- * @param {number} options.durationSec - Duración en segundos del video
- * @param {number} options.fps - Cuadros por segundo (ej. 30 o 60)
- * @param {string} [options.quality] - Calidad ('very-high', 'high', 'medium')
- * @param {AbortSignal} [options.signal] - Señal para abortar la grabación
- * @param {function} [options.onProgress] - Callback (currentFrame, totalFrames, percentage)
- * @param {function} [options.onFrame] - Función opcional llamada en cada frame con (timeSec, frameIndex, ticker)
- * @returns {Promise<Blob>} Retorna el Blob MP4 generado
  */
 export async function exportDeterministicVideo({
   app,
@@ -33,7 +24,7 @@ export async function exportDeterministicVideo({
   signal = null,
   onProgress = () => {},
   onFrame = null,
-}) {
+}: ExportVideoOptions): Promise<Blob> {
   const canvas = app.canvas;
   const width = canvas.width;
   const height = canvas.height;
@@ -100,17 +91,18 @@ export async function exportDeterministicVideo({
       // Capturar frame exacto y enviar al encoder
       await canvasSource.add(currentTimeSec, frameDurationSec);
 
-      const percent = Math.round(((frame + 1) / totalFrames) * 100);
-      onProgress(frame + 1, totalFrames, percent);
-
-      // Ceder brevemente al event loop para mantener responsiva la interfaz
-      if (frame % 4 === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
+      const current = frame + 1;
+      const percent = Math.min(100, Math.round((current / totalFrames) * 100));
+      onProgress(current, totalFrames, percent);
     }
 
-    // 5. Finalizar la codificación
-    await output.finalize();
+    // 5. Finalizar la pista de video y el empaquetado del archivo MP4
+    await canvasSource.close();
+    if (typeof (output as any).finalize === "function") {
+      await (output as any).finalize();
+    } else if (typeof (output as any).end === "function") {
+      await (output as any).end();
+    }
 
     if (!target.buffer) {
       throw new Error("Failed to retrieve final file buffer.");
@@ -129,7 +121,7 @@ export async function exportDeterministicVideo({
 /**
  * Descarga automática del archivo Blob en el navegador.
  */
-export function downloadBlob(blob, filename = "pixi-creative-coding.mp4") {
+export function downloadBlob(blob: Blob, filename = "pixi-creative-coding.mp4"): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
