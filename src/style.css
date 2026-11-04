@@ -191,6 +191,32 @@ textarea {
   margin: 4px 0;
 }
 
+.menu-section-header {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  padding: 6px 10px 2px 10px;
+}
+
+.menu-item.selected {
+  background: rgba(99, 102, 241, 0.15);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.menu-shortcut {
+  margin-left: auto;
+  font-size: 0.68rem;
+  color: #64748b;
+  padding: 2px 5px;
+  background: #1e293b;
+  border-radius: 4px;
+  border: 1px solid #334155;
+  font-family: monospace;
+}
+
 .controls {
   display: flex;
   align-items: center;
@@ -209,6 +235,56 @@ textarea {
   height: 24px;
   background: #334155;
   margin: 0 4px;
+}
+
+/* View Mode Segmented Controls */
+.view-mode-group {
+  display: inline-flex;
+  align-items: center;
+  background: #0b111e;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  line-height: 1;
+}
+
+.view-btn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.view-btn.active {
+  background: #1e293b;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.view-btn-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.2;
+}
+
+.view-btn.active .view-btn-icon {
+  color: #818cf8;
 }
 
 .controls label {
@@ -331,6 +407,31 @@ textarea {
   overflow: hidden;
   min-width: 260px;
   background: #080c14;
+}
+
+/* View Modes (Split / Code Only / Preview Only) */
+.playground-body.view-code .editor-pane {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  flex: 1 1 100% !important;
+}
+
+.playground-body.view-code .gutter-col,
+.playground-body.view-code .preview-pane {
+  display: none !important;
+}
+
+.playground-body.view-preview .editor-pane,
+.playground-body.view-preview .gutter-col {
+  display: none !important;
+}
+
+.playground-body.view-preview .preview-pane {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  flex: 1 1 100% !important;
 }
 
 /* Splitters / Gutters Draggables */
@@ -1379,20 +1480,23 @@ dialog.about-dialog {
 }
 
 .about-logo-wrapper {
-  width: 64px;
+  width: auto;
+  max-width: 220px;
   height: 64px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.22) 0%, transparent 70%);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  padding: 4px 16px;
 }
 
 .about-logo {
-  width: 48px;
-  height: 48px;
+  width: 140px;
+  height: auto;
+  max-height: 56px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 14px rgba(236, 72, 153, 0.4));
+  filter: drop-shadow(0 4px 14px rgba(236, 72, 153, 0.45));
 }
 
 .about-title {
@@ -1481,6 +1585,15 @@ dialog.about-dialog {
 }
 
 /* Responsividad */
+@media (max-width: 768px) {
+  .view-btn span {
+    display: none;
+  }
+  .view-btn {
+    padding: 5px 8px;
+  }
+}
+
 @media (max-width: 640px) {
   .form-row {
     flex-direction: column;

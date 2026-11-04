@@ -5,7 +5,7 @@ export const metadata = {
   title: "Pixi.js v8 Creative Studio & Video Exporter",
   description: "Creative coding playground in PixiJS v8 with MP4 video exporter and community preset library",
   icons: {
-    icon: "/pixijs-logo.svg",
+    icon: "/favicon.svg",
   },
 };
 
