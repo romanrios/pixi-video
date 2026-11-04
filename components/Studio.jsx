@@ -213,16 +213,180 @@ export default function Studio() {
       return app;
     }
 
+    function transformPixiImports(code) {
+      // 1. Named imports with optional aliases: import { Application, Assets as MyAssets } from 'pixi.js'
+      let transformed = code.replace(
+        /import\s*\{([^}]+)\}\s*from\s*['"](?:@?pixi(?:\.js)?(?:\/[^'"]*)?)['"];?/g,
+        (match, imports) => {
+          const formatted = imports.replace(/\b([A-Za-z0-9_$]+)\s+as\s+([A-Za-z0-9_$]+)\b/g, "$1: $2").trim();
+          return `const { ${formatted} } = PIXI;`;
+        }
+      );
+
+      // 2. Namespace imports: import * as PIXI from 'pixi.js'
+      transformed = transformed.replace(
+        /import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s+from\s*['"](?:@?pixi(?:\.js)?(?:\/[^'"]*)?)['"];?/g,
+        (match, id) => (id === "PIXI" ? "/* import * as PIXI */" : `const ${id} = PIXI;`)
+      );
+
+      // 3. Default imports: import PIXI from 'pixi.js'
+      transformed = transformed.replace(
+        /import\s+([A-Za-z0-9_$]+)\s+from\s*['"](?:@?pixi(?:\.js)?(?:\/[^'"]*)?)['"];?/g,
+        (match, id) => (id === "PIXI" ? "/* import PIXI */" : `const ${id} = PIXI;`)
+      );
+
+      // 4. Side-effect only imports: import 'pixi.js'
+      transformed = transformed.replace(
+        /import\s*['"](?:@?pixi(?:\.js)?(?:\/[^'"]*)?)['"];?/g,
+        "/* import pixi.js */"
+      );
+
+      // 5. Ensure top-level async IIFE is awaited if present
+      transformed = transformed.replace(
+        /(^|[\r\n;])\s*(?<!await\s*)\(\s*async\s*(\([^)]*\)|[a-zA-Z0-9_$]+)\s*=>/g,
+        "$1\nawait (async $2 =>"
+      );
+      transformed = transformed.replace(
+        /(^|[\r\n;])\s*(?<!await\s*)\(\s*async\s+function/g,
+        "$1\nawait (async function"
+      );
+
+      return transformed;
+    }
+
     async function runUserCode(width = currentWidth, height = currentHeight) {
       clearLogs();
       logMessage(`Running PixiJS v8 code (${width}x${height})...`, "info");
 
-      try {
-        await initPixiApp(width, height);
+      // 1. Clean up previous application instance and GPU pools
+      if (app) {
+        try {
+          app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });
+        } catch (e) {
+          console.warn("Instance cleanup error:", e);
+        }
+        app = null;
+        window.app = null;
+      }
 
-        const userCode = editor ? editor.getValue() : "";
-        const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
-        const runFn = new AsyncFunction("app", "PIXI", "console", userCode);
+      try {
+        PIXI.TexturePool?.clear();
+        PIXI.Assets?.reset();
+      } catch {}
+
+      currentWidth = width;
+      currentHeight = height;
+
+      // 2. Initialize default application for code that assumes pre-existing 'app'
+      let defaultApp = new PIXI.Application();
+      await defaultApp.init({
+        width,
+        height,
+        background: "#080c14",
+        antialias: true,
+        autoDensity: true,
+        resolution: 1,
+        preference: "webgl",
+      });
+
+      app = defaultApp;
+      window.app = defaultApp;
+      if (canvasContainer) {
+        canvasContainer.innerHTML = "";
+        canvasContainer.appendChild(defaultApp.canvas);
+      }
+
+      // 3. Setup Interception for official examples (new Application(), app.init(), document.body.appendChild)
+      let userCreatedApp = null;
+      const RealApplication = PIXI.Application;
+
+      class InterceptedApplication extends RealApplication {
+        constructor(...args) {
+          super(...args);
+          userCreatedApp = this;
+          this._initPromise = null;
+        }
+
+        async init(options = {}) {
+          const opts = { ...options };
+          // Handle resizeTo: window (from official examples) or fallback to studio resolution
+          if (opts.resizeTo === window || opts.resizeTo === document.body) {
+            delete opts.resizeTo;
+            if (!opts.width) opts.width = width;
+            if (!opts.height) opts.height = height;
+          }
+          if (!opts.width && !opts.resizeTo) opts.width = width;
+          if (!opts.height && !opts.resizeTo) opts.height = height;
+          if (opts.autoDensity === undefined) opts.autoDensity = true;
+          if (opts.resolution === undefined) opts.resolution = 1;
+
+          // If defaultApp was created earlier, destroy it to release GPU resources
+          if (defaultApp && defaultApp !== this) {
+            try {
+              defaultApp.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });
+              defaultApp = null;
+            } catch {}
+          }
+
+          const initPromise = (async () => {
+            const res = await super.init(opts);
+            if (canvasContainer && this.canvas) {
+              canvasContainer.innerHTML = "";
+              canvasContainer.appendChild(this.canvas);
+            }
+            app = this;
+            window.app = this;
+            return res;
+          })();
+
+          this._initPromise = initPromise;
+          return initPromise;
+        }
+      }
+
+      // Proxy PIXI object to supply InterceptedApplication without mutating the sealed module
+      const pixiProxy = new Proxy(PIXI, {
+        get(target, prop, receiver) {
+          if (prop === "Application") return InterceptedApplication;
+          return Reflect.get(target, prop, receiver);
+        },
+      });
+
+      window.PIXI = pixiProxy;
+      window.Application = InterceptedApplication;
+      window.Assets = PIXI.Assets;
+      window.Container = PIXI.Container;
+      window.Sprite = PIXI.Sprite;
+      window.Graphics = PIXI.Graphics;
+      window.Text = PIXI.Text;
+      window.TextStyle = PIXI.TextStyle;
+      window.Color = PIXI.Color;
+      window.Point = PIXI.Point;
+      window.Rectangle = PIXI.Rectangle;
+      window.Circle = PIXI.Circle;
+      window.Matrix = PIXI.Matrix;
+      window.Ticker = PIXI.Ticker;
+
+      // Intercept document.body.appendChild so document.body.appendChild(app.canvas) goes to canvasContainer
+      const originalAppendChild = document.body.appendChild.bind(document.body);
+      document.body.appendChild = function (node) {
+        if (
+          node instanceof HTMLCanvasElement ||
+          (userCreatedApp && node === userCreatedApp.canvas) ||
+          (app && node === app.canvas)
+        ) {
+          if (canvasContainer && !canvasContainer.contains(node)) {
+            canvasContainer.innerHTML = "";
+            canvasContainer.appendChild(node);
+          }
+          return node;
+        }
+        return originalAppendChild(node);
+      };
+
+      try {
+        const rawCode = editor ? editor.getValue() : "";
+        const transformedCode = transformPixiImports(rawCode);
 
         const customConsole = {
           log: (...args) =>
@@ -231,11 +395,37 @@ export default function Studio() {
           error: (...args) => logMessage(args.join(" "), "error"),
         };
 
-        await runFn(app, PIXI, customConsole);
+        const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
+        // Notice: do NOT pass "app" as a formal parameter so user can declare "const app = new Application()"!
+        const runFn = new AsyncFunction("PIXI", "console", transformedCode);
+
+        await runFn(pixiProxy, customConsole);
+
+        if (userCreatedApp) {
+          if (userCreatedApp._initPromise) {
+            await userCreatedApp._initPromise;
+          }
+          app = userCreatedApp;
+          window.app = userCreatedApp;
+        }
+
+        // Attach FPS counter to the active app
+        if (app && app.ticker && fpsCounter) {
+          app.ticker.add(() => {
+            if (app?.ticker?.started && fpsCounter) {
+              fpsCounter.textContent = `FPS: ${Math.round(app.ticker.FPS)}`;
+            }
+          });
+        }
+
         logMessage("Scene generated successfully.", "info");
       } catch (err) {
         console.error(err);
         logMessage(err.message || String(err), "error");
+      } finally {
+        document.body.appendChild = originalAppendChild;
+        window.PIXI = PIXI;
+        window.Application = RealApplication;
       }
     }
 

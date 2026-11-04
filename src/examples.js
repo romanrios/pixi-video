@@ -9,4 +9,5 @@ export const EXAMPLES = {
   "sacred-geometry": PRESETS_DATA.find((p) => p.id === "sacred-geometry-preset")?.code || "",
   "cyber-grid": PRESETS_DATA.find((p) => p.id === "cyber-grid-preset")?.code || "",
   "audio-waves": PRESETS_DATA.find((p) => p.id === "audio-waves-preset")?.code || "",
+  "official-bunnies": PRESETS_DATA.find((p) => p.id === "official-bunnies-preset")?.code || "",
 };
