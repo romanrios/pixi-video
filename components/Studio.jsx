@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as PIXI from "pixi.js";
 import { EXAMPLES } from "../src/examples.js";
 import { exportDeterministicVideo, downloadBlob } from "../src/recorder.js";
@@ -9,6 +9,32 @@ import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/l
 
 export default function Studio() {
   const containerRef = useRef(null);
+  const optionsRef = useRef(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+
+  const openAboutModal = () => {
+    const modal = document.getElementById("about-modal");
+    modal?.showModal();
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (optionsRef.current && !optionsRef.current.contains(e.target)) {
+        setOptionsOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setOptionsOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     // Exponer PIXI globalmente para que el código del editor pueda acceder sin imports
@@ -534,43 +560,99 @@ export default function Studio() {
       {/* Barra superior limpia */}
       <header className="navbar">
         <div className="brand">
-          <img src="/pixijs-logo.svg" alt="PixiJS Logo" className="brand-logo" />
-          <div className="brand-text">
-            <h1>Pixi Video</h1>
+          <button
+            type="button"
+            className="brand-button"
+            onClick={openAboutModal}
+            title="About Pixi Video"
+            aria-label="About Pixi Video"
+          >
+            <img src="/pixijs-logo.svg" alt="PixiJS Logo" className="brand-logo" />
+            <div className="brand-text">
+              <h1>Pixi Video</h1>
+            </div>
+          </button>
+
+          <div className="options-dropdown-container" ref={optionsRef}>
+            <button
+              id="btn-options-dropdown"
+              type="button"
+              className={`btn btn-options ${optionsOpen ? "active" : ""}`}
+              onClick={() => setOptionsOpen((prev) => !prev)}
+              aria-expanded={optionsOpen}
+              aria-haspopup="menu"
+              title="Options Menu"
+            >
+              <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              <span>Options</span>
+              <svg className={`chevron-icon ${optionsOpen ? "rotated" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+
+            <div className={`options-menu ${optionsOpen ? "open" : ""}`} role="menu" aria-orientation="vertical">
+              <button
+                type="button"
+                id="btn-open-library"
+                className="menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  openLibraryModal();
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>Library</span>
+              </button>
+
+              <button
+                type="button"
+                id="btn-open-save-preset"
+                className="menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  openCreatePresetModal();
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span>Publish</span>
+              </button>
+
+              <div className="menu-divider" role="separator"></div>
+
+              <button
+                type="button"
+                id="btn-open-about"
+                className="menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  openAboutModal();
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>About</span>
+              </button>
+            </div>
           </div>
-          <span className="brand-subtitle">Pixi.js playground + mp4 recorder</span>
         </div>
 
         <div className="controls">
-          <button
-            id="btn-open-library"
-            className="btn btn-secondary"
-            title="Explore community preset library"
-            onClick={openLibraryModal}
-          >
-            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
-            <span>Library</span>
-          </button>
-
-          <button
-            id="btn-open-save-preset"
-            className="btn btn-secondary"
-            title="Publish current code to the library"
-            onClick={openCreatePresetModal}
-          >
-            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-              <polyline points="17 21 17 13 7 13 7 21"></polyline>
-              <polyline points="7 3 7 8 15 8"></polyline>
-            </svg>
-            <span>Publish</span>
-          </button>
-
-          <div className="control-divider"></div>
-
           <button id="btn-open-record-modal" className="btn btn-record" title="Configure and export animation to MP4">
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="23 7 16 12 23 17 23 7"></polygon>
@@ -972,6 +1054,71 @@ export default function Studio() {
             </button>
           </div>
         </form>
+      </dialog>
+
+      {/* Modal About */}
+      <dialog id="about-modal" className="modal-dialog about-dialog" closedby="any" aria-labelledby="about-modal-title">
+        <div className="about-modal-body">
+          <button
+            type="button"
+            id="btn-close-about-modal"
+            className="modal-close-btn"
+            aria-label="Close modal"
+            onClick={() => document.getElementById("about-modal")?.close()}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          <div className="about-hero">
+            <div className="about-logo-wrapper">
+              <img src="/pixijs-logo.svg" alt="PixiJS Logo" className="about-logo" />
+            </div>
+            <h2 id="about-modal-title" className="about-title">Pixi Video</h2>
+            <p className="about-subtitle">PixiJS v8 creative coding playground and deterministic MP4 recorder</p>
+          </div>
+
+          <div className="about-divider"></div>
+
+          <div className="about-details-table">
+            <div className="about-row">
+              <span className="about-label">Author</span>
+              <span className="about-value author-name">Román Ríos</span>
+            </div>
+            <div className="about-row">
+              <span className="about-label">Website</span>
+              <a
+                href="https://romanrios.com.ar"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="about-value about-link"
+              >
+                romanrios.com.ar
+                <svg className="external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+              </a>
+            </div>
+            <div className="about-row">
+              <span className="about-label">License</span>
+              <span className="about-value">MIT</span>
+            </div>
+            <div className="about-row">
+              <span className="about-label">Technologies</span>
+              <span className="about-value about-techs">Pixi.js v8, Next.js, WebCodecs, Mediabunny, mp4-muxer, Turso</span>
+            </div>
+          </div>
+
+          <div className="about-divider"></div>
+
+          <div className="about-footer">
+            <span>&copy; 2026 Román Ríos</span>
+          </div>
+        </div>
       </dialog>
     </div>
   );
