@@ -273,14 +273,13 @@ async function runUserCode(width = currentWidth, height = currentHeight) {
     }
   }
 
-  const pixiProxy = new Proxy(PIXI, {
-    get(target, prop, receiver) {
-      if (prop === "Application") return InterceptedApplication;
-      return Reflect.get(target, prop, receiver);
-    },
-  });
+  const pixiScope = {
+    ...PIXI,
+    Application: InterceptedApplication,
+    [Symbol.toStringTag]: "PIXI",
+  };
 
-  window.PIXI = pixiProxy;
+  window.PIXI = pixiScope;
   window.Application = InterceptedApplication;
   window.Assets = PIXI.Assets;
   window.Container = PIXI.Container;
@@ -324,7 +323,7 @@ async function runUserCode(width = currentWidth, height = currentHeight) {
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
     const runFn = new AsyncFunction("PIXI", "console", transformedCode);
 
-    await runFn(pixiProxy, customConsole);
+    await runFn(pixiScope, customConsole);
 
     if (userCreatedApp) {
       if (userCreatedApp._initPromise) {

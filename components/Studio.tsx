@@ -510,22 +510,22 @@ export default function Studio() {
               return window.removeEventListener(type, listener, options);
             };
           }
+          if (prop === "PIXI") return pixiScope;
           if (prop in PIXI && !(prop in target)) {
-            return (PIXI as any)[prop];
+            return (pixiScope as any)[prop];
           }
           return Reflect.get(target, prop, receiver);
         },
       });
 
-      // Proxy PIXI object to supply InterceptedApplication without mutating the sealed module
-      const pixiProxy = new Proxy(PIXI, {
-        get(target, prop, receiver) {
-          if (prop === "Application") return InterceptedApplication;
-          return Reflect.get(target, prop, receiver);
-        },
-      });
+      // Safe PIXI scope that supplies InterceptedApplication without mutating the sealed module
+      const pixiScope: Record<string, any> = {
+        ...PIXI,
+        Application: InterceptedApplication,
+        [Symbol.toStringTag]: "PIXI",
+      };
 
-      window.PIXI = pixiProxy;
+      window.PIXI = pixiScope;
       window.Application = InterceptedApplication;
       window.Assets = PIXI.Assets;
       window.Container = PIXI.Container;
@@ -563,7 +563,7 @@ export default function Studio() {
           transformedCode
         );
 
-        await runFn(pixiProxy, customConsole, virtualWindow, virtualDocument, currentWidth, currentHeight);
+        await runFn(pixiScope, customConsole, virtualWindow, virtualDocument, currentWidth, currentHeight);
 
         if (userCreatedApp) {
           if (userCreatedApp._initPromise) {
