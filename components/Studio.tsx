@@ -209,43 +209,22 @@ export default function Studio() {
       }
     }
 
-    async function initPixiApp(width = currentWidth, height = currentHeight) {
-      if (app) {
-        try {
-          app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });
-        } catch (e) {
-          console.warn("Instance cleanup error:", e);
+    function updateResolutionUI(w: number, h: number) {
+      if (!resSelect) return;
+      const val = `${w}x${h}`;
+      const opt = resSelect.querySelector(`option[value="${val}"]`);
+      if (opt) {
+        (resSelect as HTMLSelectElement).value = val;
+        previousResValue = val;
+      } else {
+        const customOpt = resSelect.querySelector('option[value="custom"]');
+        if (customOpt) {
+          customOpt.textContent = `Custom (${w}x${h})`;
         }
+        (resSelect as HTMLSelectElement).value = "custom";
+        previousResValue = "custom";
       }
-
-      currentWidth = width;
-      currentHeight = height;
-
-      app = new PIXI.Application();
-
-      await app.init({
-        width,
-        height,
-        background: "#080c14",
-        antialias: true,
-        autoDensity: true,
-        resolution: 1,
-        preference: "webgl",
-      });
-
-      window.app = app;
-      if (canvasContainer) {
-        canvasContainer.innerHTML = "";
-        canvasContainer.appendChild(app.canvas);
-      }
-
-      app.ticker.add(() => {
-        if (app && app.ticker && app.ticker.started && fpsCounter) {
-          fpsCounter.textContent = `FPS: ${Math.round(app.ticker.FPS)}`;
-        }
-      });
-
-      return app;
+      updateExportSummary();
     }
 
     function transformPixiImports(code) {
@@ -289,7 +268,7 @@ export default function Studio() {
       return transformed;
     }
 
-    async function runUserCode(width = currentWidth, height = currentHeight) {
+    async function runUserCode(width = currentWidth, height = currentHeight, forceStudioResolution = false) {
       clearLogs();
       logMessage(`Running PixiJS v8 code (${width}x${height})...`, "info");
 
@@ -312,23 +291,31 @@ export default function Studio() {
       currentWidth = width;
       currentHeight = height;
 
-      // 2. Initialize default application for code that assumes pre-existing 'app'
-      let defaultApp = new PIXI.Application();
-      await defaultApp.init({
-        width,
-        height,
-        background: "#080c14",
-        antialias: true,
-        autoDensity: true,
-        resolution: 1,
-        preference: "webgl",
-      });
+      const rawCode = editorInstanceRef.current ? editorInstanceRef.current.getValue() : "";
+      const createsOwnApp = /new\s+(?:PIXI\.)?Application\b/.test(rawCode);
 
-      app = defaultApp;
-      window.app = defaultApp;
-      if (canvasContainer) {
-        canvasContainer.innerHTML = "";
-        canvasContainer.appendChild(defaultApp.canvas);
+      // 2. Initialize default application ONLY if user code does not instantiate its own Application
+      let defaultApp: any = null;
+      if (!createsOwnApp) {
+        defaultApp = new PIXI.Application();
+        await defaultApp.init({
+          width,
+          height,
+          background: "#080c14",
+          antialias: true,
+          autoDensity: true,
+          resolution: 1,
+          preference: "webgl",
+        });
+
+        app = defaultApp;
+        window.app = defaultApp;
+        if (canvasContainer) {
+          canvasContainer.innerHTML = "";
+          defaultApp.canvas.style.aspectRatio = `${width} / ${height}`;
+          canvasContainer.appendChild(defaultApp.canvas);
+          canvasContainer.style.setProperty("--scene-aspect", `${width} / ${height}`);
+        }
       }
 
       // 3. Setup Interception for official examples (new Application(), app.init(), document.body.appendChild)
@@ -345,14 +332,28 @@ export default function Studio() {
 
         async init(options: any = {}) {
           const opts = { ...options };
-          // Handle resizeTo: window (from official examples) or fallback to studio resolution
-          if (opts.resizeTo === window || opts.resizeTo === document.body) {
+
+          // Handle resizeTo: window (from official presets) or map to active studio resolution
+          const hadResizeTo = Boolean(opts.resizeTo);
+          if (hadResizeTo) {
             delete opts.resizeTo;
+          }
+
+          if (forceStudioResolution || hadResizeTo || (!opts.width && !opts.height)) {
+            opts.width = width;
+            opts.height = height;
+          } else {
+            // Scene specifies explicit width/height
             if (!opts.width) opts.width = width;
             if (!opts.height) opts.height = height;
+            // Ensure even dimensions for video export
+            if (opts.width % 2 !== 0) opts.width += 1;
+            if (opts.height % 2 !== 0) opts.height += 1;
+            currentWidth = opts.width;
+            currentHeight = opts.height;
+            updateResolutionUI(opts.width, opts.height);
           }
-          if (!opts.width && !opts.resizeTo) opts.width = width;
-          if (!opts.height && !opts.resizeTo) opts.height = height;
+
           if (opts.autoDensity === undefined) opts.autoDensity = true;
           if (opts.resolution === undefined) opts.resolution = 1;
 
@@ -366,10 +367,37 @@ export default function Studio() {
 
           const initPromise = (async () => {
             const res = await super.init(opts);
+            const activeWidth = opts.width || width;
+            const activeHeight = opts.height || height;
+
+            if (this.canvas) {
+              this.canvas.style.aspectRatio = `${activeWidth} / ${activeHeight}`;
+              this.canvas.style.position = "relative";
+              this.canvas.style.top = "auto";
+              this.canvas.style.left = "auto";
+              this.canvas.style.margin = "auto";
+            }
+
             if (canvasContainer && this.canvas) {
               canvasContainer.innerHTML = "";
               canvasContainer.appendChild(this.canvas);
+              canvasContainer.style.setProperty("--scene-aspect", `${activeWidth} / ${activeHeight}`);
             }
+
+            // Hook renderer.resize to keep aspect ratio and canvasContainer in sync
+            if (this.renderer) {
+              const origResize = this.renderer.resize.bind(this.renderer);
+              this.renderer.resize = (newW: number, newH: number, res?: number) => {
+                origResize(newW, newH, res);
+                if (this.canvas) {
+                  this.canvas.style.aspectRatio = `${newW} / ${newH}`;
+                }
+                if (canvasContainer) {
+                  canvasContainer.style.setProperty("--scene-aspect", `${newW} / ${newH}`);
+                }
+              };
+            }
+
             app = this;
             window.app = this;
             return res;
@@ -378,7 +406,55 @@ export default function Studio() {
           this._initPromise = initPromise;
           return initPromise;
         }
+
+        get resizeTo() {
+          return virtualWindow;
+        }
+
+        set resizeTo(_val: any) {
+          // Protected: studio resolution selector controls dimensions
+        }
+
+        resize() {
+          if (this.renderer && currentWidth && currentHeight) {
+            this.renderer.resize(currentWidth, currentHeight);
+          }
+        }
       }
+
+      // Safe virtual window that mirrors scene resolution
+      const resizeListeners = new Set<() => void>();
+      const virtualWindow = new Proxy(window, {
+        get(target, prop, receiver) {
+          if (prop === "innerWidth") return currentWidth;
+          if (prop === "innerHeight") return currentHeight;
+          if (prop === "outerWidth") return currentWidth;
+          if (prop === "outerHeight") return currentHeight;
+          if (prop === "Application") return InterceptedApplication;
+          if (prop === "addEventListener") {
+            return (type: string, listener: any, options: any) => {
+              if (type === "resize" && typeof listener === "function") {
+                resizeListeners.add(listener);
+                return;
+              }
+              return window.addEventListener(type, listener, options);
+            };
+          }
+          if (prop === "removeEventListener") {
+            return (type: string, listener: any, options: any) => {
+              if (type === "resize") {
+                resizeListeners.delete(listener);
+                return;
+              }
+              return window.removeEventListener(type, listener, options);
+            };
+          }
+          if (prop in PIXI && !(prop in target)) {
+            return (PIXI as any)[prop];
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      });
 
       // Proxy PIXI object to supply InterceptedApplication without mutating the sealed module
       const pixiProxy = new Proxy(PIXI, {
@@ -421,22 +497,28 @@ export default function Studio() {
       };
 
       try {
-        const rawCode = editorInstanceRef.current ? editorInstanceRef.current.getValue() : "";
         const jsCode = await transpileTypeScript(monacoRef.current, editorInstanceRef.current, rawCode);
         const transformedCode = transformPixiImports(jsCode);
 
         const customConsole = {
-          log: (...args) =>
+          log: (...args: any[]) =>
             logMessage(args.map((a) => (typeof a === "object" ? JSON.stringify(a) : a)).join(" "), "info"),
-          warn: (...args) => logMessage(args.join(" "), "warn"),
-          error: (...args) => logMessage(args.join(" "), "error"),
+          warn: (...args: any[]) => logMessage(args.join(" "), "warn"),
+          error: (...args: any[]) => logMessage(args.join(" "), "error"),
         };
 
         const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
-        // Notice: do NOT pass "app" as a formal parameter so user can declare "const app = new Application()"!
-        const runFn = new AsyncFunction("PIXI", "console", transformedCode);
+        // Shadow window, innerWidth, innerHeight so user code accesses scene dimensions
+        const runFn = new AsyncFunction(
+          "PIXI",
+          "console",
+          "window",
+          "innerWidth",
+          "innerHeight",
+          transformedCode
+        );
 
-        await runFn(pixiProxy, customConsole);
+        await runFn(pixiProxy, customConsole, virtualWindow, currentWidth, currentHeight);
 
         if (userCreatedApp) {
           if (userCreatedApp._initPromise) {
@@ -456,7 +538,7 @@ export default function Studio() {
         }
 
         logMessage("Scene generated successfully.", "info");
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
         logMessage(err.message || String(err), "error");
       } finally {
@@ -488,7 +570,7 @@ export default function Studio() {
       abortController = new AbortController();
 
       try {
-        await runUserCode(width, height);
+        await runUserCode(width, height, true);
 
         logMessage(`Starting recording: ${durationSec}s at ${fps} FPS (${width}x${height})...`, "info");
 
@@ -562,7 +644,7 @@ export default function Studio() {
           if (w && h) {
             currentWidth = w;
             currentHeight = h;
-            runUserCode(w, h);
+            runUserCode(w, h, true);
             updateExportSummary();
           }
         }
@@ -589,7 +671,7 @@ export default function Studio() {
         if (resSelect) (resSelect as HTMLSelectElement).value = "custom";
 
         customResModal?.close();
-        runUserCode(w, h);
+        runUserCode(w, h, true);
         updateExportSummary();
       });
 

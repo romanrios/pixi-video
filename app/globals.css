@@ -748,9 +748,19 @@ body.is-resizing-row * {
 .canvas-container canvas {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
   border-radius: 8px;
-  max-width: 100%;
-  max-height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 100% !important;
+  max-height: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  aspect-ratio: var(--scene-aspect, auto) !important;
   object-fit: contain;
+  display: block;
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  margin: auto !important;
+  transition: aspect-ratio 0.2s ease;
 }
 
 /* ==========================================================================
