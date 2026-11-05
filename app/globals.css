@@ -622,6 +622,16 @@ body.is-resizing-row * {
   align-items: center;
 }
 
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-view-toggle {
+  display: none !important;
+}
+
 .status-tags {
   display: flex;
   gap: 8px;
@@ -1866,106 +1876,130 @@ dialog.about-dialog {
 /* Responsividad */
 @media (max-width: 768px) {
   body {
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
-    overflow-y: auto;
-    overflow-x: hidden;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   #app {
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   .navbar {
     position: sticky;
     top: 0;
     z-index: 50;
+    flex-shrink: 0;
   }
 
-  /* Preview debajo del código y consola en mobile */
+  /* Ocultar la opción Split en mobile */
+  .view-option-split {
+    display: none !important;
+  }
+
+  /* El contenedor principal ocupa exactamente el alto disponible sin scroll en la página */
   .playground-body {
     flex-direction: column;
-    height: auto;
-    min-height: calc(100vh - 58px);
-    min-height: calc(100dvh - 58px);
-    overflow: visible;
+    height: calc(100vh - 58px);
+    height: calc(100dvh - 58px);
+    overflow: hidden;
+    position: relative;
   }
 
-  .editor-pane {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    height: auto;
-    flex: none;
-    border-right: none;
-    border-bottom: 1px solid #1e293b;
-  }
-
-  .editor-wrapper {
-    height: 330px;
-    min-height: 220px;
-  }
-
+  /* Desactivar separador de columnas */
   .gutter-col {
     display: none !important;
   }
 
-  .console-box {
-    height: 120px;
-    min-height: 32px;
+  /* El separador vertical de consola no se arrastra en mobile */
+  .gutter-row {
+    pointer-events: none !important;
+    cursor: default !important;
   }
 
-  .preview-pane {
+  /* Botón de toggle rápido entre Code y Preview en mobile */
+  .mobile-view-toggle {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    height: 26px;
+    border-radius: 6px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .mobile-view-toggle:hover {
+    background: #334155;
+    color: #ffffff;
+  }
+
+  .mobile-view-toggle .btn-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* En modo Code (cuando viewMode === 'code') */
+  .playground-body.view-code .editor-pane {
+    display: flex !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    height: auto;
-    min-height: 360px;
-    flex: none;
-  }
-
-  .canvas-container {
-    min-height: 300px;
-    height: 52vh;
-    max-height: 480px;
-    padding: 12px;
-  }
-
-  /* Modos de vista en mobile */
-  .playground-body.view-code {
-    height: calc(100vh - 58px);
-    height: calc(100dvh - 58px);
-    overflow: hidden;
-  }
-
-  .playground-body.view-code .editor-pane {
     height: 100% !important;
     flex: 1 1 100% !important;
+    border-right: none;
     border-bottom: none;
+  }
+
+  .playground-body.view-code .preview-pane {
+    display: none !important;
   }
 
   .playground-body.view-code .editor-wrapper {
     flex: 1;
+    min-height: 0;
     height: auto;
   }
 
-  .playground-body.view-preview {
-    height: calc(100vh - 58px);
-    height: calc(100dvh - 58px);
-    overflow: hidden;
+  .playground-body.view-code .console-box {
+    height: 110px;
+    min-height: 32px;
+    max-height: 30vh;
+    flex-shrink: 0;
   }
 
-  .playground-body.view-preview .preview-pane {
+  /* En modo Preview (por defecto en mobile, o cuando viewMode !== 'code') */
+  .playground-body:not(.view-code) .editor-pane {
+    display: none !important;
+  }
+
+  .playground-body:not(.view-code) .preview-pane {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     height: 100% !important;
     flex: 1 1 100% !important;
+    border-left: none;
   }
 
-  .playground-body.view-preview .canvas-container {
+  .playground-body:not(.view-code) .canvas-container {
+    flex: 1;
+    width: 100%;
     height: 100%;
     max-height: 100%;
+    min-height: 0;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 

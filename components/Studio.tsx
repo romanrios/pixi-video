@@ -24,9 +24,13 @@ export default function Studio() {
   const [viewMode, setViewMode] = useState("split");
 
   const changeViewMode = useCallback((mode: string) => {
-    setViewMode(mode);
+    let targetMode = mode;
+    if (typeof window !== "undefined" && window.innerWidth < 768 && targetMode === "split") {
+      targetMode = "preview";
+    }
+    setViewMode(targetMode);
     try {
-      localStorage.setItem("pixi_studio_view_mode", mode);
+      localStorage.setItem("pixi_studio_view_mode", targetMode);
     } catch { }
     setTimeout(() => {
       editorInstanceRef.current?.layout();
@@ -71,12 +75,31 @@ export default function Studio() {
 
   useEffect(() => {
     try {
+      const isMobile = window.innerWidth < 768;
       const savedMode = localStorage.getItem("pixi_studio_view_mode");
-      if (savedMode === "code" || savedMode === "preview" || savedMode === "split") {
-        setViewMode(savedMode);
+      if (isMobile) {
+        if (savedMode === "code" || savedMode === "preview") {
+          setViewMode(savedMode);
+        } else {
+          setViewMode("preview");
+        }
+      } else {
+        if (savedMode === "code" || savedMode === "preview" || savedMode === "split") {
+          setViewMode(savedMode);
+        }
       }
     } catch { }
   }, []);
+
+  useEffect(() => {
+    const handleWindowResize = () => {
+      if (window.innerWidth < 768 && viewMode === "split") {
+        changeViewMode("preview");
+      }
+    };
+    window.addEventListener("resize", handleWindowResize);
+    return () => window.removeEventListener("resize", handleWindowResize);
+  }, [viewMode, changeViewMode]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -653,7 +676,12 @@ export default function Studio() {
     }
 
     function setupEventListeners() {
-      btnRun?.addEventListener("click", () => runUserCode());
+      btnRun?.addEventListener("click", () => {
+        runUserCode();
+        if (window.innerWidth < 768) {
+          changeViewMode("preview");
+        }
+      });
 
       btnOpenRecordModal?.addEventListener("click", () => {
         updateExportSummary();
@@ -839,9 +867,17 @@ export default function Studio() {
         }
 
         let isDraggingRow = false;
+        let startY = 0;
+        let startHeight = 0;
 
         gutterRow.addEventListener("pointerdown", (e) => {
+          if (window.innerWidth < 768) {
+            // Deshabilitar drag en mobile para evitar que la consola aumente hacia abajo
+            return;
+          }
           isDraggingRow = true;
+          startY = e.clientY;
+          startHeight = consoleBox.offsetHeight;
           gutterRow.setPointerCapture(e.pointerId);
           gutterRow.classList.add("dragging");
           document.body.classList.add("is-resizing-row");
@@ -850,10 +886,12 @@ export default function Studio() {
 
         gutterRow.addEventListener("pointermove", (e) => {
           if (!isDraggingRow) return;
+          if (window.innerWidth < 768) return;
           const rect = editorPane.getBoundingClientRect();
+          const deltaY = startY - e.clientY;
           const minH = 32;
-          const maxH = rect.height - 100;
-          const newH = Math.max(minH, Math.min(maxH, rect.bottom - e.clientY));
+          const maxH = Math.max(minH, rect.height - 100);
+          const newH = Math.max(minH, Math.min(maxH, startHeight + deltaY));
           consoleBox.style.height = `${newH}px`;
           editorInstanceRef.current?.layout();
         });
@@ -876,6 +914,7 @@ export default function Studio() {
         gutterRow.addEventListener("pointercancel", stopDragRow);
 
         gutterRow.addEventListener("dblclick", () => {
+          if (window.innerWidth < 768) return;
           consoleBox.style.height = "130px";
           localStorage.removeItem("pixi_studio_console_height");
           editorInstanceRef.current?.layout();
@@ -963,6 +1002,9 @@ export default function Studio() {
             badge.textContent = preset.title;
           }
           logMessage(`Preset "${preset.title}" loaded from library.`, "info");
+          if (window.innerWidth < 768) {
+            changeViewMode("preview");
+          }
         }
       },
       getEditorCode: () => (editorInstanceRef.current ? editorInstanceRef.current.getValue() : ""),
@@ -1128,7 +1170,7 @@ export default function Studio() {
                 <div className={`options-submenu ${viewSubmenuOpen ? "open" : ""}`} role="menu">
                   <button
                     type="button"
-                    className={`menu-item ${viewMode === "split" ? "selected" : ""}`}
+                    className={`menu-item view-option-split ${viewMode === "split" ? "selected" : ""}`}
                     role="menuitem"
                     onClick={() => {
                       changeViewMode("split");
@@ -1246,7 +1288,7 @@ export default function Studio() {
             <div className={`options-menu view-menu-right ${viewDropdownOpen ? "open" : ""}`} role="menu" aria-orientation="vertical">
               <button
                 type="button"
-                className={`menu-item ${viewMode === "split" ? "selected" : ""}`}
+                className={`menu-item view-option-split ${viewMode === "split" ? "selected" : ""}`}
                 role="menuitem"
                 onClick={() => {
                   changeViewMode("split");
@@ -1332,16 +1374,30 @@ export default function Studio() {
                 Basic Shapes
               </span>
             </div>
-            <button
-              id="btn-run"
-              className="btn btn-primary btn-sm btn-run-editor"
-              title="Run code on canvas (Ctrl + Enter)"
-            >
-              <svg className="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              <span>Run</span>
-            </button>
+            <div className="pane-header-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm mobile-view-toggle"
+                onClick={() => changeViewMode("preview")}
+                title="Switch to Preview"
+              >
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>Preview</span>
+              </button>
+              <button
+                id="btn-run"
+                className="btn btn-primary btn-sm btn-run-editor"
+                title="Run code on canvas (Ctrl + Enter)"
+              >
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>Run</span>
+              </button>
+            </div>
           </div>
           <div className="editor-wrapper">
             <Editor
@@ -1399,12 +1455,26 @@ export default function Studio() {
 
         <section className="preview-pane" id="preview-pane">
           <div className="pane-header">
-            <span className="pane-title-icon" title="Preview & Canvas">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-            </span>
+            <div className="pane-header-title">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm mobile-view-toggle"
+                onClick={() => changeViewMode("code")}
+                title="Switch to Code"
+              >
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                <span>Code</span>
+              </button>
+              <span className="pane-title-icon" title="Preview & Canvas">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </span>
+            </div>
             <div className="status-tags">
               <select
                 id="preview-res-select"
