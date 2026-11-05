@@ -148,6 +148,8 @@ async function handleGoogleCredentialResponse(response: any) {
   }
 }
 
+let googleIdInitialized = false;
+
 /**
  * Inicialización del módulo de autenticación.
  */
@@ -163,11 +165,16 @@ export async function initAuth() {
     if (config.googleClientId) {
       const checkGoogleScript = () => {
         if (window.google?.accounts?.id) {
-          window.google.accounts.id.initialize({
-            client_id: config.googleClientId,
-            callback: handleGoogleCredentialResponse,
-            auto_select: false,
-          });
+          const alreadyInitialized = googleIdInitialized || (window as any).__googleIdInitialized;
+          if (!alreadyInitialized) {
+            window.google.accounts.id.initialize({
+              client_id: config.googleClientId,
+              callback: handleGoogleCredentialResponse,
+              auto_select: false,
+            });
+            googleIdInitialized = true;
+            (window as any).__googleIdInitialized = true;
+          }
           setupGoogleButton();
         } else {
           setTimeout(checkGoogleScript, 100);
