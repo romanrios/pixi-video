@@ -1910,6 +1910,84 @@ dialog.about-dialog {
     top: 0;
     z-index: 50;
     flex-shrink: 0;
+    flex-wrap: nowrap;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .brand {
+    gap: 8px;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .brand-button {
+    gap: 8px;
+    padding: 3px 4px;
+    margin: -3px -4px;
+    min-width: 0;
+  }
+
+  .brand-logo {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+
+  .brand-text h1 {
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+
+  /* Ocultar texto y chevron de Options en mobile */
+  .btn-options span,
+  .btn-options .chevron-icon {
+    display: none !important;
+  }
+
+  .btn-options {
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    justify-content: center !important;
+  }
+
+  .btn-options .btn-icon {
+    margin: 0 !important;
+    width: 17px;
+    height: 17px;
+  }
+
+  /* Ocultar texto de Record MP4 en mobile */
+  .btn-record span {
+    display: none !important;
+  }
+
+  .btn-record {
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    justify-content: center !important;
+  }
+
+  .btn-record .btn-icon {
+    margin: 0 !important;
+    width: 17px;
+    height: 17px;
+  }
+
+  .control-divider {
+    display: none !important;
+  }
+
+  .controls {
+    width: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
   }
 
   /* Ocultar la opción Split en mobile */
@@ -2046,15 +2124,6 @@ dialog.about-dialog {
 
   .form-row {
     flex-direction: column;
-  }
-
-  .controls {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .control-divider {
-    display: none;
   }
 
   .pane-header {
