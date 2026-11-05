@@ -39,7 +39,7 @@ export default function Studio() {
   const handleEditorIconClick = useCallback(() => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     if (viewMode === "split") {
-      changeViewMode("preview");
+      changeViewMode("code");
     } else if (!isMobile) {
       changeViewMode("split");
     } else {
@@ -50,7 +50,7 @@ export default function Studio() {
   const handlePreviewIconClick = useCallback(() => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     if (viewMode === "split") {
-      changeViewMode("code");
+      changeViewMode("preview");
     } else if (!isMobile) {
       changeViewMode("split");
     } else {
@@ -1290,10 +1290,10 @@ export default function Studio() {
                 onClick={handleEditorIconClick}
                 title={
                   viewMode === "split"
-                    ? "Switch to Preview (Alt+3)"
+                    ? "Expand Editor (Alt+2)"
                     : "Restore Split view (Alt+1)"
                 }
-                aria-label={viewMode === "split" ? "Switch to Preview" : "Restore Split view"}
+                aria-label={viewMode === "split" ? "Expand Editor" : "Restore Split view"}
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="16 18 22 12 16 6"></polyline>
@@ -1404,10 +1404,10 @@ export default function Studio() {
                 onClick={handlePreviewIconClick}
                 title={
                   viewMode === "split"
-                    ? "Switch to Code (Alt+2)"
+                    ? "Expand Preview (Alt+3)"
                     : "Restore Split view (Alt+1)"
                 }
-                aria-label={viewMode === "split" ? "Switch to Code" : "Restore Split view"}
+                aria-label={viewMode === "split" ? "Expand Preview" : "Restore Split view"}
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
