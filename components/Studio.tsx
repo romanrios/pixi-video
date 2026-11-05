@@ -13,14 +13,12 @@ import { configureMonaco, transpileTypeScript } from "../src/monaco-pixi";
 export default function Studio() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const optionsRef = useRef<HTMLDivElement | null>(null);
-  const viewDropdownRef = useRef<HTMLDivElement | null>(null);
   const editorInstanceRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const runUserCodeRef = useRef<(() => Promise<void>) | null>(null);
 
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [viewSubmenuOpen, setViewSubmenuOpen] = useState(false);
-  const [viewDropdownOpen, setViewDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState("split");
 
   const changeViewMode = useCallback((mode: string) => {
@@ -37,6 +35,28 @@ export default function Studio() {
       window.dispatchEvent(new Event("resize"));
     }, 50);
   }, []);
+
+  const handleEditorIconClick = useCallback(() => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (viewMode === "split") {
+      changeViewMode("preview");
+    } else if (!isMobile) {
+      changeViewMode("split");
+    } else {
+      changeViewMode("preview");
+    }
+  }, [viewMode, changeViewMode]);
+
+  const handlePreviewIconClick = useCallback(() => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (viewMode === "split") {
+      changeViewMode("code");
+    } else if (!isMobile) {
+      changeViewMode("split");
+    } else {
+      changeViewMode("code");
+    }
+  }, [viewMode, changeViewMode]);
 
   const handleEditorDidMount = useCallback(
     (editor: any, monaco: any) => {
@@ -102,20 +122,16 @@ export default function Studio() {
   }, [viewMode, changeViewMode]);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (optionsRef.current && !optionsRef.current.contains(e.target)) {
+    const handleClickOutside = (e: MouseEvent | PointerEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
         setOptionsOpen(false);
         setViewSubmenuOpen(false);
       }
-      if (viewDropdownRef.current && !viewDropdownRef.current.contains(e.target)) {
-        setViewDropdownOpen(false);
-      }
     };
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOptionsOpen(false);
         setViewSubmenuOpen(false);
-        setViewDropdownOpen(false);
       }
       if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
         if (e.key === "1") {
@@ -123,19 +139,16 @@ export default function Studio() {
           changeViewMode("split");
           setOptionsOpen(false);
           setViewSubmenuOpen(false);
-          setViewDropdownOpen(false);
         } else if (e.key === "2") {
           e.preventDefault();
           changeViewMode("code");
           setOptionsOpen(false);
           setViewSubmenuOpen(false);
-          setViewDropdownOpen(false);
         } else if (e.key === "3") {
           e.preventDefault();
           changeViewMode("preview");
           setOptionsOpen(false);
           setViewSubmenuOpen(false);
-          setViewDropdownOpen(false);
         }
       }
     };
@@ -1248,99 +1261,6 @@ export default function Studio() {
         </div>
 
         <div className="controls">
-          <div className="view-dropdown-container" ref={viewDropdownRef}>
-            <button
-              id="btn-view-dropdown"
-              type="button"
-              className={`btn btn-view ${viewDropdownOpen ? "active" : ""}`}
-              onClick={() => setViewDropdownOpen((prev) => !prev)}
-              aria-expanded={viewDropdownOpen}
-              aria-haspopup="menu"
-              title="Change view layout (Alt+1, Alt+2, Alt+3)"
-            >
-              {viewMode === "code" && (
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 18 22 12 16 6"></polyline>
-                  <polyline points="8 6 2 12 8 18"></polyline>
-                </svg>
-              )}
-              {viewMode === "split" && (
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="12" y1="3" x2="12" y2="21"></line>
-                </svg>
-              )}
-              {viewMode === "preview" && (
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              )}
-              <span>
-                <span className="view-label-prefix">View: </span>
-                {viewMode === "code" ? "Code" : viewMode === "preview" ? "Preview" : "Split"}
-              </span>
-              <svg className={`chevron-icon ${viewDropdownOpen ? "rotated" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-
-            <div className={`options-menu view-menu-right ${viewDropdownOpen ? "open" : ""}`} role="menu" aria-orientation="vertical">
-              <button
-                type="button"
-                className={`menu-item view-option-split ${viewMode === "split" ? "selected" : ""}`}
-                role="menuitem"
-                onClick={() => {
-                  changeViewMode("split");
-                  setViewDropdownOpen(false);
-                }}
-              >
-                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="12" y1="3" x2="12" y2="21"></line>
-                </svg>
-                <span>Split</span>
-                <span className="menu-shortcut">Alt+1</span>
-              </button>
-
-              <button
-                type="button"
-                className={`menu-item ${viewMode === "code" ? "selected" : ""}`}
-                role="menuitem"
-                onClick={() => {
-                  changeViewMode("code");
-                  setViewDropdownOpen(false);
-                }}
-              >
-                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 18 22 12 16 6"></polyline>
-                  <polyline points="8 6 2 12 8 18"></polyline>
-                </svg>
-                <span>Code</span>
-                <span className="menu-shortcut">Alt+2</span>
-              </button>
-
-              <button
-                type="button"
-                className={`menu-item ${viewMode === "preview" ? "selected" : ""}`}
-                role="menuitem"
-                onClick={() => {
-                  changeViewMode("preview");
-                  setViewDropdownOpen(false);
-                }}
-              >
-                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <span>Preview</span>
-                <span className="menu-shortcut">Alt+3</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="control-divider"></div>
-
           <button id="btn-open-record-modal" className="btn btn-record" title="Configure and export animation to MP4">
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="23 7 16 12 23 17 23 7"></polygon>
@@ -1364,12 +1284,22 @@ export default function Studio() {
         <section className="editor-pane" id="editor-pane">
           <div className="pane-header">
             <div className="pane-header-title">
-              <span className="pane-title-icon" title="JS Code Editor (PixiJS v8)">
+              <button
+                type="button"
+                className="pane-title-icon"
+                onClick={handleEditorIconClick}
+                title={
+                  viewMode === "split"
+                    ? "Switch to Preview (Alt+3)"
+                    : "Restore Split view (Alt+1)"
+                }
+                aria-label={viewMode === "split" ? "Switch to Preview" : "Restore Split view"}
+              >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="16 18 22 12 16 6"></polyline>
                   <polyline points="8 6 2 12 8 18"></polyline>
                 </svg>
-              </span>
+              </button>
               <span id="active-preset-badge" className="active-preset-badge">
                 Basic Shapes
               </span>
@@ -1468,12 +1398,22 @@ export default function Studio() {
                 </svg>
                 <span>Code</span>
               </button>
-              <span className="pane-title-icon" title="Preview & Canvas">
+              <button
+                type="button"
+                className="pane-title-icon"
+                onClick={handlePreviewIconClick}
+                title={
+                  viewMode === "split"
+                    ? "Switch to Code (Alt+2)"
+                    : "Restore Split view (Alt+1)"
+                }
+                aria-label={viewMode === "split" ? "Switch to Code" : "Restore Split view"}
+              >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
                 </svg>
-              </span>
+              </button>
             </div>
             <div className="status-tags">
               <select

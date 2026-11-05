@@ -608,6 +608,24 @@ body.is-resizing-row * {
   align-items: center;
   justify-content: center;
   color: #818cf8;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.pane-title-icon:hover {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+  transform: scale(1.08);
+}
+
+.pane-title-icon:active {
+  transform: scale(0.95);
 }
 
 .active-preset-badge {
