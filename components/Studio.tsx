@@ -6,8 +6,9 @@ import Editor from "@monaco-editor/react";
 import { EXAMPLES } from "../src/examples";
 import { exportDeterministicVideo, downloadBlob } from "../src/recorder";
 import type { VideoQuality } from "@/types/recorder";
-import { initAuth } from "../src/auth-ui";
+import { initAuth, getCurrentUser } from "../src/auth-ui";
 import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/library-ui";
+import { updatePreset } from "../src/api";
 import { configureMonaco, transpileTypeScript } from "../src/monaco-pixi";
 
 export default function Studio() {
@@ -16,6 +17,9 @@ export default function Studio() {
   const editorInstanceRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const runUserCodeRef = useRef<(() => Promise<void>) | null>(null);
+  const handleSaveProjectRef = useRef<(() => Promise<void>) | null>(null);
+  const handleSaveAsProjectRef = useRef<(() => void) | null>(null);
+  const handleNewProjectRef = useRef<(() => void) | null>(null);
 
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [viewSubmenuOpen, setViewSubmenuOpen] = useState(false);
@@ -68,6 +72,11 @@ export default function Studio() {
       // Atajo de ejecución: Ctrl/Cmd + Enter
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
         runUserCodeRef.current?.();
+      });
+
+      // Atajo de guardado: Ctrl/Cmd + S
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        handleSaveProjectRef.current?.();
       });
 
       // Atajo de comentar / descomentar: Ctrl/Cmd + }
@@ -133,6 +142,10 @@ export default function Studio() {
         setOptionsOpen(false);
         setViewSubmenuOpen(false);
       }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
+        e.preventDefault();
+        handleSaveProjectRef.current?.();
+      }
       if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
         if (e.key === "1") {
           e.preventDefault();
@@ -168,7 +181,10 @@ export default function Studio() {
     let currentWidth = 720;
     let currentHeight = 720;
     let previousResValue = "720x720";
+    let currentPresetId: string | null = null;
     let currentPresetTitle = "Basic Shapes";
+    let currentPresetDesc = "";
+    let currentPresetUserId: string | null = null;
     let abortController = null;
 
     // Referencias del DOM
@@ -998,6 +1014,102 @@ export default function Studio() {
       }
     }
 
+    const BLANK_PROJECT_TEMPLATE = `import { Application, Graphics } from 'pixi.js';
+
+(async () => {
+  // Crear e inicializar la aplicación PixiJS v8
+  const app = new Application();
+  await app.init({ background: '#0b0f19', resizeTo: window });
+  document.body.appendChild(app.canvas);
+
+  // ¡Agrega tu código creativo aquí!
+})();
+`;
+
+    const handleNewProject = () => {
+      currentPresetId = null;
+      currentPresetTitle = "Nuevo proyecto";
+      currentPresetDesc = "";
+      currentPresetUserId = null;
+
+      if (editorInstanceRef.current) {
+        editorInstanceRef.current.setValue(BLANK_PROJECT_TEMPLATE);
+      }
+
+      const badge = document.getElementById("active-preset-badge");
+      if (badge) {
+        badge.textContent = "Nuevo proyecto";
+      }
+
+      updateExportSummary();
+      runUserCode();
+      logMessage("Nuevo proyecto en blanco creado.", "info");
+    };
+    handleNewProjectRef.current = handleNewProject;
+
+    const handleSaveAsProject = () => {
+      const user = getCurrentUser();
+      if (!user) {
+        alert("Debes iniciar sesión con Google para guardar proyectos.");
+        return;
+      }
+
+      const defaultTitle = currentPresetId
+        ? `${currentPresetTitle} (Copia)`
+        : currentPresetTitle && currentPresetTitle !== "Basic Shapes"
+        ? currentPresetTitle
+        : "Mi Proyecto";
+
+      openCreatePresetModal({
+        defaultTitle,
+        defaultDescription: currentPresetDesc,
+        openedFromLibrary: false,
+      });
+    };
+    handleSaveAsProjectRef.current = handleSaveAsProject;
+
+    const handleSaveProject = async () => {
+      const user = getCurrentUser();
+      if (!user) {
+        alert("Debes iniciar sesión con Google para guardar proyectos.");
+        return;
+      }
+
+      const isOwnProject =
+        Boolean(currentPresetId) &&
+        (user.isAdmin || currentPresetUserId === user.id);
+
+      if (isOwnProject && currentPresetId) {
+        try {
+          logMessage(`Guardando cambios en "${currentPresetTitle}"...`, "info");
+          const code = editorInstanceRef.current ? editorInstanceRef.current.getValue() : "";
+          const thumbnail = await captureSceneThumbnail();
+
+          await updatePreset(currentPresetId, {
+            title: currentPresetTitle,
+            description: currentPresetDesc,
+            code,
+            thumbnail: thumbnail || undefined,
+          });
+
+          logMessage(`Proyecto "${currentPresetTitle}" guardado exitosamente.`, "info");
+
+          const badge = document.getElementById("active-preset-badge");
+          if (badge) {
+            badge.classList.add("saved-flash");
+            setTimeout(() => badge.classList.remove("saved-flash"), 1200);
+          }
+        } catch (err: any) {
+          console.error("Error al guardar proyecto:", err);
+          alert(`Error al guardar: ${err.message}`);
+          logMessage(`Error al guardar: ${err.message}`, "error");
+        }
+      } else {
+        handleSaveAsProject();
+      }
+    };
+    handleSaveProjectRef.current = handleSaveProject;
+
     setupEventListeners();
     setupSplitters();
     updateExportSummary();
@@ -1006,7 +1118,10 @@ export default function Studio() {
       onSelectPreset: (preset) => {
         const activeEditor = editorInstanceRef.current;
         if (activeEditor) {
+          currentPresetId = preset.id;
           currentPresetTitle = preset.title;
+          currentPresetDesc = preset.description || "";
+          currentPresetUserId = preset.userId || null;
           activeEditor.setValue(preset.code);
           runUserCode();
           updateExportSummary();
@@ -1014,11 +1129,26 @@ export default function Studio() {
           if (badge) {
             badge.textContent = preset.title;
           }
-          logMessage(`Preset "${preset.title}" loaded from library.`, "info");
+          logMessage(`Preset "${preset.title}" cargado desde la biblioteca.`, "info");
           if (window.innerWidth < 768) {
             changeViewMode("preview");
           }
         }
+      },
+      onSavePresetSuccess: (saved) => {
+        const user = getCurrentUser();
+        currentPresetId = saved.id;
+        currentPresetTitle = saved.title;
+        currentPresetDesc = saved.description || "";
+        currentPresetUserId = user ? user.id : null;
+        updateExportSummary();
+        const badge = document.getElementById("active-preset-badge");
+        if (badge) {
+          badge.textContent = saved.title;
+          badge.classList.add("saved-flash");
+          setTimeout(() => badge.classList.remove("saved-flash"), 1200);
+        }
+        logMessage(`Proyecto "${saved.title}" guardado con éxito.`, "info");
       },
       getEditorCode: () => (editorInstanceRef.current ? editorInstanceRef.current.getValue() : ""),
       getCanvasThumbnail: captureSceneThumbnail,
@@ -1104,6 +1234,66 @@ export default function Studio() {
             <div className={`options-menu ${optionsOpen ? "open" : ""}`} role="menu" aria-orientation="vertical">
               <button
                 type="button"
+                id="btn-project-new"
+                className="menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  handleNewProjectRef.current?.();
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="12" y1="18" x2="12" y2="12"></line>
+                  <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                <span>Nuevo</span>
+              </button>
+
+              <button
+                type="button"
+                id="btn-project-save"
+                className="menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  handleSaveProjectRef.current?.();
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span>Guardar</span>
+                <span className="menu-shortcut">Ctrl+S</span>
+              </button>
+
+              <button
+                type="button"
+                id="btn-project-save-as"
+                className="menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  handleSaveAsProjectRef.current?.();
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                  <line x1="12" y1="11" x2="12" y2="7"></line>
+                  <line x1="10" y1="9" x2="14" y2="9"></line>
+                </svg>
+                <span>Guardar como...</span>
+              </button>
+
+              <div className="menu-divider" role="separator"></div>
+
+              <button
+                type="button"
                 id="btn-open-library"
                 className="menu-item"
                 role="menuitem"
@@ -1116,25 +1306,7 @@ export default function Studio() {
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                 </svg>
-                <span>Library</span>
-              </button>
-
-              <button
-                type="button"
-                id="btn-open-save-preset"
-                className="menu-item"
-                role="menuitem"
-                onClick={() => {
-                  setOptionsOpen(false);
-                  openCreatePresetModal();
-                }}
-              >
-                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                  <polyline points="7 3 7 8 15 8"></polyline>
-                </svg>
-                <span>Publish</span>
+                <span>Biblioteca</span>
               </button>
 
               <div className="menu-divider" role="separator"></div>
@@ -1643,15 +1815,15 @@ export default function Studio() {
               </svg>
             </div>
             <div>
-              <h2 id="library-modal-title">Community Library</h2>
-              <p className="modal-subtitle">Explore community presets or load your creations</p>
+              <h2 id="library-modal-title">Biblioteca de Proyectos</h2>
+              <p className="modal-subtitle">Explora proyectos de la comunidad o abre tus creaciones</p>
             </div>
           </div>
           <button
             type="button"
             id="btn-close-library"
             className="modal-close-btn"
-            aria-label="Close modal"
+            aria-label="Cerrar modal"
             onClick={() => (document.getElementById("library-modal") as HTMLDialogElement)?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
@@ -1667,15 +1839,15 @@ export default function Studio() {
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="library-search-input" className="search-input" placeholder="Search presets by title, author, or description..." />
+            <input type="text" id="library-search-input" className="search-input" placeholder="Buscar proyectos por título, autor o descripción..." />
           </div>
 
           <div className="library-filters">
             <div className="filter-pills">
-              <button type="button" id="filter-all-btn" className="pill active">All</button>
-              <button type="button" id="filter-mine-btn" className="pill">My Presets</button>
+              <button type="button" id="filter-all-btn" className="pill active">Todos</button>
+              <button type="button" id="filter-mine-btn" className="pill">Mis Proyectos</button>
             </div>
-            <span id="library-count-badge" className="library-counter">Loading...</span>
+            <span id="library-count-badge" className="library-counter">Cargando...</span>
           </div>
         </div>
 
@@ -1686,7 +1858,7 @@ export default function Studio() {
         </div>
       </dialog>
 
-      {/* Modal para Publicar / Editar Preset */}
+      {/* Modal para Guardar / Editar Preset */}
       <dialog id="preset-editor-modal" className="modal-dialog preset-editor-dialog" closedby="any" aria-labelledby="preset-editor-title-heading">
         <div className="modal-header">
           <div className="modal-title-group">
@@ -1698,15 +1870,15 @@ export default function Studio() {
               </svg>
             </div>
             <div>
-              <h2 id="preset-editor-title-heading">Publish Preset to Library</h2>
-              <p className="modal-subtitle">Share your PixiJS v8 code with the community</p>
+              <h2 id="preset-editor-title-heading">Guardar como nuevo proyecto</h2>
+              <p className="modal-subtitle">Guarda tu animación PixiJS v8 en tu biblioteca</p>
             </div>
           </div>
           <button
             type="button"
             id="btn-close-preset-editor"
             className="modal-close-btn"
-            aria-label="Close modal"
+            aria-label="Cerrar modal"
             onClick={() => (document.getElementById("preset-editor-modal") as HTMLDialogElement)?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
@@ -1718,11 +1890,11 @@ export default function Studio() {
 
         <form id="preset-editor-form" className="modal-form" method="dialog">
           <div className="form-field">
-            <label>Auto-Generated Snapshot</label>
+            <label>Miniatura automática</label>
             <div id="preset-thumb-preview-container" className="preset-thumb-preview-container">
               <img
                 id="preset-thumb-preview-img"
-                alt="Preset Thumbnail Preview"
+                alt="Vista previa de miniatura"
                 className="preset-thumb-preview-img"
                 style={{ display: "none" }}
               />
@@ -1732,23 +1904,23 @@ export default function Studio() {
                   <circle cx="8.5" cy="8.5" r="1.5"></circle>
                   <polyline points="21 15 16 10 5 21"></polyline>
                 </svg>
-                <span>Snapshot captured automatically from canvas</span>
+                <span>Miniatura capturada automáticamente del canvas</span>
               </div>
             </div>
           </div>
 
           <div className="form-field">
-            <label htmlFor="preset-title-input">Preset Title *</label>
-            <input type="text" id="preset-title-input" className="form-input" placeholder="e.g. Spiral Galaxy with Particles" required maxLength={80} />
+            <label htmlFor="preset-title-input">Título del proyecto *</label>
+            <input type="text" id="preset-title-input" className="form-input" placeholder="Ej: Galaxia espiral con partículas" required maxLength={80} />
           </div>
 
           <div className="form-field">
-            <label htmlFor="preset-desc-input">Description (Optional)</label>
-            <textarea id="preset-desc-input" className="form-textarea" rows={2} placeholder="Briefly describe the visual effect, interaction, or technique used..."></textarea>
+            <label htmlFor="preset-desc-input">Descripción (Opcional)</label>
+            <textarea id="preset-desc-input" className="form-textarea" rows={2} placeholder="Describe brevemente el efecto visual, interacción o técnica utilizada..."></textarea>
           </div>
 
           <div className="form-field">
-            <label>Code to save</label>
+            <label>Código a guardar</label>
             <div className="code-preview-box">
               <pre><code id="preset-code-preview"></code></pre>
             </div>
@@ -1761,13 +1933,13 @@ export default function Studio() {
               className="btn btn-secondary"
               onClick={() => (document.getElementById("preset-editor-modal") as HTMLDialogElement)?.close()}
             >
-              Cancel
+              Cancelar
             </button>
             <button type="submit" id="btn-submit-preset-editor" className="btn btn-primary">
               <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              <span>Publish to Library</span>
+              <span>Guardar proyecto</span>
             </button>
           </div>
         </form>

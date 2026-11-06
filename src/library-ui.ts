@@ -6,9 +6,11 @@ let allPresets: Preset[] = [];
 let currentFilter: "all" | "mine" = "all";
 let searchQuery = "";
 let onSelectPresetCallback: ((preset: Preset) => void) | null = null;
+let onSavePresetSuccessCallback: ((preset: { id: string; title: string; description?: string }) => void) | null = null;
 let getEditorCodeCallback: (() => string) | null = null;
 let getCanvasThumbnailCallback: (() => Promise<string | null> | string | null) | null = null;
 let editingPresetId: string | null = null;
+let openedFromLibraryModal = false;
 let currentThumbnailData: string | null = null;
 
 function updateThumbnailPreview(dataUrl: string | null): void {
@@ -78,7 +80,7 @@ function renderPresets(): void {
   });
 
   if (libraryCountBadge) {
-    libraryCountBadge.textContent = `${filtered.length} preset${filtered.length === 1 ? "" : "s"}`;
+    libraryCountBadge.textContent = `${filtered.length} proyecto${filtered.length === 1 ? "" : "s"}`;
   }
 
   if (filtered.length === 0) {
@@ -88,11 +90,11 @@ function renderPresets(): void {
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
         </svg>
-        <p class="empty-title">No presets found</p>
+        <p class="empty-title">No se encontraron proyectos</p>
         <p class="empty-desc">${
           currentFilter === "mine"
-            ? "You haven't published any presets yet. Create one in the editor and share it!"
-            : "No presets match your search."
+            ? "Aún no has guardado ningún proyecto. ¡Crea uno en el editor y guárdalo!"
+            : "No hay proyectos que coincidan con la búsqueda."
         }</p>
       </div>
     `;
@@ -109,14 +111,14 @@ function renderPresets(): void {
         : `<div class="card-author-placeholder">${(preset.userName || "U")[0]?.toUpperCase()}</div>`;
 
       const badge = isOwner
-        ? `<span class="preset-tag owner-tag">Yours</span>`
+        ? `<span class="preset-tag owner-tag">Tuyo</span>`
         : user && user.isAdmin
         ? `<span class="preset-tag admin-tag">Admin</span>`
         : "";
 
       return `
         <article class="preset-card" data-id="${preset.id}">
-          <div class="preset-card-media" title="Click to load preset into editor">
+          <div class="preset-card-media" title="Haz clic para cargar el proyecto en el editor">
             ${
               preset.thumbnailUrl
                 ? `<img src="${preset.thumbnailUrl}" alt="${escapeHtml(preset.title)}" class="preset-card-thumb" loading="lazy" />`
@@ -127,7 +129,7 @@ function renderPresets(): void {
                       <circle cx="8.5" cy="8.5" r="1.5"></circle>
                       <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
-                    <span>Preset Preview</span>
+                    <span>Vista previa</span>
                   </div>
                 `
             }
@@ -153,24 +155,24 @@ function renderPresets(): void {
             </div>
 
             <div class="card-actions-group">
-              <button class="btn btn-primary btn-load-preset" data-id="${preset.id}" title="Load preset into editor">
+              <button class="btn btn-primary btn-load-preset" data-id="${preset.id}" title="Cargar proyecto en el editor">
                 <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.2" fill="none">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
-                <span>Load</span>
+                <span>Cargar</span>
               </button>
 
               ${
                 canManage
                   ? `
                 <div class="card-manage-actions">
-                  <button class="btn-icon-action btn-edit-preset" data-id="${preset.id}" title="Edit Preset">
+                  <button class="btn-icon-action btn-edit-preset" data-id="${preset.id}" title="Editar proyecto">
                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button class="btn-icon-action danger btn-delete-preset" data-id="${preset.id}" title="Delete Preset">
+                  <button class="btn-icon-action danger btn-delete-preset" data-id="${preset.id}" title="Eliminar proyecto">
                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none">
                       <polyline points="3 6 5 6 21 6"></polyline>
                       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -219,7 +221,7 @@ function renderPresets(): void {
       if (!found) return;
 
       const confirmDelete = window.confirm(
-        `Are you sure you want to delete preset "${found.title}" from the library? This action cannot be undone.`
+        `¿Estás seguro de que deseas eliminar el proyecto "${found.title}" de la biblioteca? Esta acción no se puede deshacer.`
       );
       if (!confirmDelete) return;
 
@@ -227,7 +229,7 @@ function renderPresets(): void {
         await deletePreset(found.id);
         await loadLibraryPresets();
       } catch (err: any) {
-        alert(`Error deleting preset: ${err.message}`);
+        alert(`Error al eliminar el proyecto: ${err.message}`);
       }
     });
   });
@@ -259,16 +261,20 @@ export async function openLibraryModal(): Promise<void> {
 /**
  * Abre el modal para guardar o publicar el código actual del editor.
  */
-export async function openCreatePresetModal(): Promise<void> {
+export async function openCreatePresetModal(options?: {
+  defaultTitle?: string;
+  defaultDescription?: string;
+  openedFromLibrary?: boolean;
+}): Promise<void> {
   const user = getCurrentUser();
   if (!user) {
-    alert("You must sign in with Google to publish a preset to the library.");
+    alert("Debes iniciar sesión con Google para guardar proyectos.");
     return;
   }
 
   const code = getEditorCodeCallback ? getEditorCodeCallback() : "";
   if (!code || !code.trim()) {
-    alert("The code editor is empty.");
+    alert("El editor de código está vacío.");
     return;
   }
 
@@ -280,16 +286,17 @@ export async function openCreatePresetModal(): Promise<void> {
   const presetCodePreview = document.getElementById("preset-code-preview");
 
   editingPresetId = null;
+  openedFromLibraryModal = Boolean(options?.openedFromLibrary);
   currentThumbnailData = null;
   updateThumbnailPreview(null);
 
-  if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = "Publish Preset to Library";
+  if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = "Guardar como nuevo proyecto";
   if (btnSubmitPresetEditor) {
     const span = btnSubmitPresetEditor.querySelector("span");
-    if (span) span.textContent = "Publish to Library";
+    if (span) span.textContent = "Guardar proyecto";
   }
-  if (presetTitleInput) presetTitleInput.value = "";
-  if (presetDescInput) presetDescInput.value = "";
+  if (presetTitleInput) presetTitleInput.value = options?.defaultTitle || "";
+  if (presetDescInput) presetDescInput.value = options?.defaultDescription || "";
   if (presetCodePreview) presetCodePreview.textContent = code;
 
   // Generar automáticamente el snapshot del canvas en vivo
@@ -304,6 +311,9 @@ export async function openCreatePresetModal(): Promise<void> {
 
   if (presetEditorModal) {
     presetEditorModal.showModal();
+    if (presetTitleInput) {
+      setTimeout(() => presetTitleInput.focus(), 60);
+    }
   }
 }
 
@@ -319,13 +329,14 @@ async function openEditPresetModal(preset: Preset): Promise<void> {
   const presetCodePreview = document.getElementById("preset-code-preview");
 
   editingPresetId = preset.id;
+  openedFromLibraryModal = true;
   currentThumbnailData = preset.thumbnailUrl || null;
   updateThumbnailPreview(currentThumbnailData);
 
-  if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = `Edit Preset: ${preset.title}`;
+  if (presetEditorTitleHeading) presetEditorTitleHeading.textContent = `Editar proyecto: ${preset.title}`;
   if (btnSubmitPresetEditor) {
     const span = btnSubmitPresetEditor.querySelector("span");
-    if (span) span.textContent = "Save Changes";
+    if (span) span.textContent = "Guardar cambios";
   }
   if (presetTitleInput) presetTitleInput.value = preset.title;
   if (presetDescInput) presetDescInput.value = preset.description || "";
@@ -352,14 +363,17 @@ async function openEditPresetModal(preset: Preset): Promise<void> {
  */
 export function initLibraryUI({
   onSelectPreset,
+  onSavePresetSuccess,
   getEditorCode,
   getCanvasThumbnail,
 }: {
   onSelectPreset?: (preset: Preset) => void;
+  onSavePresetSuccess?: (preset: { id: string; title: string; description?: string }) => void;
   getEditorCode?: () => string;
   getCanvasThumbnail?: () => Promise<string | null> | string | null;
 }): void {
   onSelectPresetCallback = onSelectPreset || null;
+  onSavePresetSuccessCallback = onSavePresetSuccess || null;
   getEditorCodeCallback = getEditorCode || null;
   getCanvasThumbnailCallback = getCanvasThumbnail || null;
 
@@ -385,7 +399,9 @@ export function initLibraryUI({
   btnCloseLibrary?.addEventListener("click", () => libraryModal?.close());
 
   // Apertura de modal de guardar
-  btnOpenSavePreset?.addEventListener("click", openCreatePresetModal);
+  btnOpenSavePreset?.addEventListener("click", () => {
+    openCreatePresetModal();
+  });
 
   // Cierre de modal de edición/creación
   btnClosePresetEditor?.addEventListener("click", () => presetEditorModal?.close());
@@ -408,7 +424,7 @@ export function initLibraryUI({
   filterMineBtn?.addEventListener("click", () => {
     const user = getCurrentUser();
     if (!user) {
-      alert("Sign in with Google to view your published presets.");
+      alert("Inicia sesión con Google para ver tus proyectos guardados.");
       return;
     }
     currentFilter = "mine";
@@ -430,7 +446,7 @@ export function initLibraryUI({
       : "";
 
     if (!title) {
-      alert("Please enter a title for the preset.");
+      alert("Por favor ingresa un título para el proyecto.");
       return;
     }
 
@@ -438,7 +454,7 @@ export function initLibraryUI({
       if (btnSubmitPresetEditor) {
         btnSubmitPresetEditor.disabled = true;
         const span = btnSubmitPresetEditor.querySelector("span");
-        if (span) span.textContent = "Saving & Uploading...";
+        if (span) span.textContent = "Guardando...";
       }
 
       // Asegurar que capturamos el snapshot actual si no se generó previamente
@@ -449,23 +465,35 @@ export function initLibraryUI({
         } catch {}
       }
 
+      let savedPresetId = editingPresetId;
       if (editingPresetId) {
         await updatePreset(editingPresetId, { title, description, code, thumbnail });
       } else {
-        await createPreset({ title, description, code, thumbnail });
+        const res = await createPreset({ title, description, code, thumbnail });
+        savedPresetId = res.presetId || null;
+      }
+
+      if (savedPresetId) {
+        onSavePresetSuccessCallback?.({
+          id: savedPresetId,
+          title,
+          description,
+        });
       }
 
       presetEditorModal?.close();
       await loadLibraryPresets();
-      libraryModal?.showModal();
+      if (openedFromLibraryModal) {
+        libraryModal?.showModal();
+      }
     } catch (err: any) {
       console.error(err);
-      alert(`Error saving preset: ${err.message}`);
+      alert(`Error al guardar el proyecto: ${err.message}`);
     } finally {
       if (btnSubmitPresetEditor) {
         btnSubmitPresetEditor.disabled = false;
         const span = btnSubmitPresetEditor.querySelector("span");
-        if (span) span.textContent = editingPresetId ? "Save Changes" : "Publish to Library";
+        if (span) span.textContent = editingPresetId ? "Guardar cambios" : "Guardar proyecto";
       }
     }
   });
