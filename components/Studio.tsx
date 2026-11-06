@@ -1017,18 +1017,18 @@ export default function Studio() {
     const BLANK_PROJECT_TEMPLATE = `import { Application, Graphics } from 'pixi.js';
 
 (async () => {
-  // Crear e inicializar la aplicación PixiJS v8
+  // Create and initialize PixiJS v8 Application
   const app = new Application();
   await app.init({ background: '#0b0f19', resizeTo: window });
   document.body.appendChild(app.canvas);
 
-  // ¡Agrega tu código creativo aquí!
+  // Add your creative code here!
 })();
 `;
 
     const handleNewProject = () => {
       currentPresetId = null;
-      currentPresetTitle = "Nuevo proyecto";
+      currentPresetTitle = "Untitled Project";
       currentPresetDesc = "";
       currentPresetUserId = null;
 
@@ -1038,27 +1038,27 @@ export default function Studio() {
 
       const badge = document.getElementById("active-preset-badge");
       if (badge) {
-        badge.textContent = "Nuevo proyecto";
+        badge.textContent = "Untitled Project";
       }
 
       updateExportSummary();
       runUserCode();
-      logMessage("Nuevo proyecto en blanco creado.", "info");
+      logMessage("New blank project created.", "info");
     };
     handleNewProjectRef.current = handleNewProject;
 
     const handleSaveAsProject = () => {
       const user = getCurrentUser();
       if (!user) {
-        alert("Debes iniciar sesión con Google para guardar proyectos.");
+        alert("You must sign in with Google to save presets.");
         return;
       }
 
       const defaultTitle = currentPresetId
-        ? `${currentPresetTitle} (Copia)`
+        ? `${currentPresetTitle} (Copy)`
         : currentPresetTitle && currentPresetTitle !== "Basic Shapes"
         ? currentPresetTitle
-        : "Mi Proyecto";
+        : "My Preset";
 
       openCreatePresetModal({
         defaultTitle,
@@ -1071,7 +1071,7 @@ export default function Studio() {
     const handleSaveProject = async () => {
       const user = getCurrentUser();
       if (!user) {
-        alert("Debes iniciar sesión con Google para guardar proyectos.");
+        alert("You must sign in with Google to save presets.");
         return;
       }
 
@@ -1081,7 +1081,7 @@ export default function Studio() {
 
       if (isOwnProject && currentPresetId) {
         try {
-          logMessage(`Guardando cambios en "${currentPresetTitle}"...`, "info");
+          logMessage(`Saving changes to "${currentPresetTitle}"...`, "info");
           const code = editorInstanceRef.current ? editorInstanceRef.current.getValue() : "";
           const thumbnail = await captureSceneThumbnail();
 
@@ -1092,7 +1092,7 @@ export default function Studio() {
             thumbnail: thumbnail || undefined,
           });
 
-          logMessage(`Proyecto "${currentPresetTitle}" guardado exitosamente.`, "info");
+          logMessage(`Project "${currentPresetTitle}" saved successfully.`, "info");
 
           const badge = document.getElementById("active-preset-badge");
           if (badge) {
@@ -1100,9 +1100,9 @@ export default function Studio() {
             setTimeout(() => badge.classList.remove("saved-flash"), 1200);
           }
         } catch (err: any) {
-          console.error("Error al guardar proyecto:", err);
-          alert(`Error al guardar: ${err.message}`);
-          logMessage(`Error al guardar: ${err.message}`, "error");
+          console.error("Error saving preset:", err);
+          alert(`Error saving preset: ${err.message}`);
+          logMessage(`Error saving preset: ${err.message}`, "error");
         }
       } else {
         handleSaveAsProject();
@@ -1129,7 +1129,7 @@ export default function Studio() {
           if (badge) {
             badge.textContent = preset.title;
           }
-          logMessage(`Preset "${preset.title}" cargado desde la biblioteca.`, "info");
+          logMessage(`Preset "${preset.title}" loaded from library.`, "info");
           if (window.innerWidth < 768) {
             changeViewMode("preview");
           }
@@ -1148,7 +1148,7 @@ export default function Studio() {
           badge.classList.add("saved-flash");
           setTimeout(() => badge.classList.remove("saved-flash"), 1200);
         }
-        logMessage(`Proyecto "${saved.title}" guardado con éxito.`, "info");
+        logMessage(`Preset "${saved.title}" saved successfully.`, "info");
       },
       getEditorCode: () => (editorInstanceRef.current ? editorInstanceRef.current.getValue() : ""),
       getCanvasThumbnail: captureSceneThumbnail,
@@ -1248,7 +1248,7 @@ export default function Studio() {
                   <line x1="12" y1="18" x2="12" y2="12"></line>
                   <line x1="9" y1="15" x2="15" y2="15"></line>
                 </svg>
-                <span>Nuevo</span>
+                <span>New</span>
               </button>
 
               <button
@@ -1266,7 +1266,7 @@ export default function Studio() {
                   <polyline points="17 21 17 13 7 13 7 21"></polyline>
                   <polyline points="7 3 7 8 15 8"></polyline>
                 </svg>
-                <span>Guardar</span>
+                <span>Save</span>
                 <span className="menu-shortcut">Ctrl+S</span>
               </button>
 
@@ -1287,7 +1287,7 @@ export default function Studio() {
                   <line x1="12" y1="11" x2="12" y2="7"></line>
                   <line x1="10" y1="9" x2="14" y2="9"></line>
                 </svg>
-                <span>Guardar como...</span>
+                <span>Save As...</span>
               </button>
 
               <div className="menu-divider" role="separator"></div>
@@ -1306,7 +1306,7 @@ export default function Studio() {
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                 </svg>
-                <span>Biblioteca</span>
+                <span>Library</span>
               </button>
 
               <div className="menu-divider" role="separator"></div>
@@ -1815,15 +1815,15 @@ export default function Studio() {
               </svg>
             </div>
             <div>
-              <h2 id="library-modal-title">Biblioteca de Proyectos</h2>
-              <p className="modal-subtitle">Explora proyectos de la comunidad o abre tus creaciones</p>
+              <h2 id="library-modal-title">Community Library</h2>
+              <p className="modal-subtitle">Explore community presets or load your creations</p>
             </div>
           </div>
           <button
             type="button"
             id="btn-close-library"
             className="modal-close-btn"
-            aria-label="Cerrar modal"
+            aria-label="Close modal"
             onClick={() => (document.getElementById("library-modal") as HTMLDialogElement)?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
@@ -1839,15 +1839,15 @@ export default function Studio() {
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="library-search-input" className="search-input" placeholder="Buscar proyectos por título, autor o descripción..." />
+            <input type="text" id="library-search-input" className="search-input" placeholder="Search presets by title, author, or description..." />
           </div>
 
           <div className="library-filters">
             <div className="filter-pills">
-              <button type="button" id="filter-all-btn" className="pill active">Todos</button>
-              <button type="button" id="filter-mine-btn" className="pill">Mis Proyectos</button>
+              <button type="button" id="filter-all-btn" className="pill active">All</button>
+              <button type="button" id="filter-mine-btn" className="pill">My Presets</button>
             </div>
-            <span id="library-count-badge" className="library-counter">Cargando...</span>
+            <span id="library-count-badge" className="library-counter">Loading...</span>
           </div>
         </div>
 
@@ -1870,15 +1870,15 @@ export default function Studio() {
               </svg>
             </div>
             <div>
-              <h2 id="preset-editor-title-heading">Guardar como nuevo proyecto</h2>
-              <p className="modal-subtitle">Guarda tu animación PixiJS v8 en tu biblioteca</p>
+              <h2 id="preset-editor-title-heading">Save Preset</h2>
+              <p className="modal-subtitle">Save your PixiJS v8 code to your library</p>
             </div>
           </div>
           <button
             type="button"
             id="btn-close-preset-editor"
             className="modal-close-btn"
-            aria-label="Cerrar modal"
+            aria-label="Close modal"
             onClick={() => (document.getElementById("preset-editor-modal") as HTMLDialogElement)?.close()}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
@@ -1890,11 +1890,11 @@ export default function Studio() {
 
         <form id="preset-editor-form" className="modal-form" method="dialog">
           <div className="form-field">
-            <label>Miniatura automática</label>
+            <label>Auto-Generated Snapshot</label>
             <div id="preset-thumb-preview-container" className="preset-thumb-preview-container">
               <img
                 id="preset-thumb-preview-img"
-                alt="Vista previa de miniatura"
+                alt="Preset Thumbnail Preview"
                 className="preset-thumb-preview-img"
                 style={{ display: "none" }}
               />
@@ -1904,23 +1904,23 @@ export default function Studio() {
                   <circle cx="8.5" cy="8.5" r="1.5"></circle>
                   <polyline points="21 15 16 10 5 21"></polyline>
                 </svg>
-                <span>Miniatura capturada automáticamente del canvas</span>
+                <span>Snapshot captured automatically from canvas</span>
               </div>
             </div>
           </div>
 
           <div className="form-field">
-            <label htmlFor="preset-title-input">Título del proyecto *</label>
-            <input type="text" id="preset-title-input" className="form-input" placeholder="Ej: Galaxia espiral con partículas" required maxLength={80} />
+            <label htmlFor="preset-title-input">Preset Title *</label>
+            <input type="text" id="preset-title-input" className="form-input" placeholder="e.g. Spiral Galaxy with Particles" required maxLength={80} />
           </div>
 
           <div className="form-field">
-            <label htmlFor="preset-desc-input">Descripción (Opcional)</label>
-            <textarea id="preset-desc-input" className="form-textarea" rows={2} placeholder="Describe brevemente el efecto visual, interacción o técnica utilizada..."></textarea>
+            <label htmlFor="preset-desc-input">Description (Optional)</label>
+            <textarea id="preset-desc-input" className="form-textarea" rows={2} placeholder="Briefly describe the visual effect, interaction, or technique used..."></textarea>
           </div>
 
           <div className="form-field">
-            <label>Código a guardar</label>
+            <label>Code to save</label>
             <div className="code-preview-box">
               <pre><code id="preset-code-preview"></code></pre>
             </div>
@@ -1933,13 +1933,13 @@ export default function Studio() {
               className="btn btn-secondary"
               onClick={() => (document.getElementById("preset-editor-modal") as HTMLDialogElement)?.close()}
             >
-              Cancelar
+              Cancel
             </button>
             <button type="submit" id="btn-submit-preset-editor" className="btn btn-primary">
               <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              <span>Guardar proyecto</span>
+              <span>Save Preset</span>
             </button>
           </div>
         </form>
