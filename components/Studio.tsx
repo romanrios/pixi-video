@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import * as PIXI from "pixi.js";
 import Editor from "@monaco-editor/react";
 import { EXAMPLES } from "../src/examples";
-import { exportDeterministicVideo, downloadBlob } from "../src/recorder";
+import { exportDeterministicVideo, downloadBlob, isWebCodecsSupported } from "../src/recorder";
 import type { VideoQuality } from "@/types/recorder";
 import { initAuth, getCurrentUser } from "../src/auth-ui";
 import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/library-ui";
@@ -238,6 +238,60 @@ export default function Studio() {
       if (consoleLogs) consoleLogs.innerHTML = "";
     }
 
+    let activeErrorListener: ((event: ErrorEvent) => void) | null = null;
+    let activeRejectionListener: ((event: PromiseRejectionEvent) => void) | null = null;
+
+    function onTickerError(err: any) {
+      const errMsg = err?.stack || err?.message || String(err);
+      logMessage(`[Runtime Error] ${errMsg}`, "error");
+      console.error("[Pixi Playground Runtime Error]", err);
+    }
+
+    function wrapTicker(ticker: any) {
+      if (!ticker || ticker._wrappedByStudio) return;
+      ticker._wrappedByStudio = true;
+
+      const originalAdd = ticker.add.bind(ticker);
+      ticker.add = function (fn: any, context?: any, priority?: any) {
+        if (typeof fn !== "function") return originalAdd(fn, context, priority);
+        const safeFn = function (this: any, ...args: any[]) {
+          try {
+            return fn.apply(this, args);
+          } catch (err: any) {
+            ticker.stop();
+            onTickerError(err);
+          }
+        };
+        safeFn._orig = fn;
+        (fn as any)._safeTickerFn = safeFn;
+        return originalAdd(safeFn, context, priority);
+      };
+
+      if (typeof ticker.addOnce === "function") {
+        const originalAddOnce = ticker.addOnce.bind(ticker);
+        ticker.addOnce = function (fn: any, context?: any, priority?: any) {
+          if (typeof fn !== "function") return originalAddOnce(fn, context, priority);
+          const safeFn = function (this: any, ...args: any[]) {
+            try {
+              return fn.apply(this, args);
+            } catch (err: any) {
+              ticker.stop();
+              onTickerError(err);
+            }
+          };
+          safeFn._orig = fn;
+          (fn as any)._safeTickerFn = safeFn;
+          return originalAddOnce(safeFn, context, priority);
+        };
+      }
+
+      const originalRemove = ticker.remove.bind(ticker);
+      ticker.remove = function (fn: any, context?: any) {
+        const targetFn = (fn && (fn as any)._safeTickerFn) || fn;
+        return originalRemove(targetFn, context);
+      };
+    }
+
     function getSelectedResolution() {
       return { width: currentWidth, height: currentHeight };
     }
@@ -340,6 +394,34 @@ export default function Studio() {
 
     async function runUserCode(width = currentWidth, height = currentHeight, forceStudioResolution = false) {
       clearLogs();
+
+      // Remove any previous runtime error listeners
+      if (activeErrorListener) {
+        window.removeEventListener("error", activeErrorListener);
+        activeErrorListener = null;
+      }
+      if (activeRejectionListener) {
+        window.removeEventListener("unhandledrejection", activeRejectionListener);
+        activeRejectionListener = null;
+      }
+
+      activeErrorListener = (event: ErrorEvent) => {
+        if (event.filename && (event.filename.includes("_next") || event.filename.includes("react"))) {
+          return;
+        }
+        const msg = event.message || (event.error && event.error.message) || String(event);
+        logMessage(`[Runtime Error] ${msg}`, "error");
+      };
+
+      activeRejectionListener = (event: PromiseRejectionEvent) => {
+        const reason = event.reason;
+        const msg = reason?.message || String(reason);
+        logMessage(`[Async Error] ${msg}`, "error");
+      };
+
+      window.addEventListener("error", activeErrorListener);
+      window.addEventListener("unhandledrejection", activeRejectionListener);
+
       logMessage(`Running PixiJS v8 code (${width}x${height})...`, "info");
 
       // 0. Remove any rogue canvas elements attached directly under <body>
@@ -371,6 +453,7 @@ export default function Studio() {
       let defaultApp: any = null;
       if (!createsOwnApp) {
         defaultApp = new PIXI.Application();
+        wrapTicker(defaultApp.ticker);
         await defaultApp.init({
           width,
           height,
@@ -380,6 +463,7 @@ export default function Studio() {
           resolution: 1,
           preference: "webgl",
         });
+        wrapTicker(defaultApp.ticker);
 
         app = defaultApp;
         window.app = defaultApp;
@@ -400,6 +484,7 @@ export default function Studio() {
           super(...args);
           userCreatedApp = this;
           this._initPromise = null;
+          wrapTicker(this.ticker);
         }
 
         async init(options: any = {}) {
@@ -439,6 +524,7 @@ export default function Studio() {
 
           const initPromise = (async () => {
             const res = await super.init(opts);
+            wrapTicker(this.ticker);
             const activeWidth = opts.width || width;
             const activeHeight = opts.height || height;
 
@@ -624,6 +710,7 @@ export default function Studio() {
           }
           app = userCreatedApp;
           window.app = userCreatedApp;
+          wrapTicker(app.ticker);
         }
 
         // Attach FPS counter to the active app
@@ -714,6 +801,14 @@ export default function Studio() {
       });
 
       btnOpenRecordModal?.addEventListener("click", () => {
+        if (!isWebCodecsSupported()) {
+          showToast(
+            "WebCodecs (VideoEncoder) is not supported in this browser. MP4 recording requires Chrome, Edge, Brave, or a browser with WebCodecs enabled.",
+            "warning",
+            6000
+          );
+          return;
+        }
         updateExportSummary();
         recordModal?.showModal();
       });
@@ -1193,6 +1288,12 @@ export default function Studio() {
     return () => {
       window.removeEventListener("resize", onWindowResize);
       document.body.classList.remove("is-resizing-col", "is-resizing-row");
+      if (activeErrorListener) {
+        window.removeEventListener("error", activeErrorListener);
+      }
+      if (activeRejectionListener) {
+        window.removeEventListener("unhandledrejection", activeRejectionListener);
+      }
       if (app) {
         try {
           app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true });

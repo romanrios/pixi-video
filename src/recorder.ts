@@ -14,6 +14,13 @@ const QUALITY_MAP: Record<VideoQuality, Quality> = {
 };
 
 /**
+ * Verifica si el navegador actual soporta WebCodecs (VideoEncoder).
+ */
+export function isWebCodecsSupported(): boolean {
+  return typeof window !== "undefined" && typeof (window as any).VideoEncoder !== "undefined";
+}
+
+/**
  * Graba la escena de Pixi de forma determinista cuadro a cuadro a una tasa de FPS fija.
  */
 export async function exportDeterministicVideo({
@@ -25,6 +32,12 @@ export async function exportDeterministicVideo({
   onProgress = () => {},
   onFrame = null,
 }: ExportVideoOptions): Promise<Blob> {
+  if (!isWebCodecsSupported()) {
+    throw new Error(
+      "WebCodecs (VideoEncoder) is not supported in this browser. Please use Chrome, Edge, Brave, or enable WebCodecs."
+    );
+  }
+
   const canvas = app.canvas;
   const width = canvas.width;
   const height = canvas.height;
@@ -68,6 +81,22 @@ export async function exportDeterministicVideo({
 
   await output.start();
 
+  let isCleanedUp = false;
+  const safeCleanup = async () => {
+    if (isCleanedUp) return;
+    isCleanedUp = true;
+    try {
+      await canvasSource.close();
+    } catch { }
+    try {
+      if (typeof (output as any).finalize === "function") {
+        await (output as any).finalize();
+      } else if (typeof (output as any).end === "function") {
+        await (output as any).end();
+      }
+    } catch { }
+  };
+
   try {
     // 4. Renderizado determinista cuadro a cuadro
     for (let frame = 0; frame < totalFrames; frame++) {
@@ -97,12 +126,7 @@ export async function exportDeterministicVideo({
     }
 
     // 5. Finalizar la pista de video y el empaquetado del archivo MP4
-    await canvasSource.close();
-    if (typeof (output as any).finalize === "function") {
-      await (output as any).finalize();
-    } else if (typeof (output as any).end === "function") {
-      await (output as any).end();
-    }
+    await safeCleanup();
 
     if (!target.buffer) {
       throw new Error("Failed to retrieve final file buffer.");
@@ -110,6 +134,9 @@ export async function exportDeterministicVideo({
 
     const blob = new Blob([target.buffer], { type: "video/mp4" });
     return blob;
+  } catch (err) {
+    await safeCleanup();
+    throw err;
   } finally {
     // Restaurar el ticker si estaba corriendo
     if (wasRunning) {

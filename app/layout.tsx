@@ -4,10 +4,34 @@ import Script from "next/script";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pixi Video",
-  description: "Creative coding playground in PixiJS v8 with MP4 video exporter and community preset library",
+  title: "Pixi Video — PixiJS v8 Creative Playground & MP4 Exporter",
+  description:
+    "Interactive creative coding playground for PixiJS v8 with deterministic 60 FPS MP4 video exporter and community preset library.",
+  keywords: [
+    "pixi",
+    "pixijs",
+    "creative coding",
+    "webcodecs",
+    "mp4 exporter",
+    "webgl",
+    "webgpu",
+    "monaco editor",
+  ],
   icons: {
     icon: "/favicon.svg",
+  },
+  openGraph: {
+    title: "Pixi Video — PixiJS v8 Creative Playground & MP4 Exporter",
+    description:
+      "Interactive creative coding playground for PixiJS v8 with deterministic 60 FPS MP4 video exporter.",
+    type: "website",
+    siteName: "Pixi Video",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pixi Video — PixiJS v8 Creative Playground & MP4 Exporter",
+    description:
+      "Interactive creative coding playground for PixiJS v8 with deterministic 60 FPS MP4 video exporter.",
   },
 };
 
