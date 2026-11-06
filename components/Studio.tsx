@@ -1364,6 +1364,22 @@ export default function Studio() {
 
               <button
                 type="button"
+                id="btn-open-library"
+                className="menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  openLibraryModal();
+                }}
+              >
+                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Open</span>
+              </button>
+
+              <button
+                type="button"
                 id="btn-project-save"
                 className="menu-item"
                 role="menuitem"
@@ -1399,25 +1415,6 @@ export default function Studio() {
                   <line x1="10" y1="9" x2="14" y2="9"></line>
                 </svg>
                 <span>Save As...</span>
-              </button>
-
-              <div className="menu-divider" role="separator"></div>
-
-              <button
-                type="button"
-                id="btn-open-library"
-                className="menu-item"
-                role="menuitem"
-                onClick={() => {
-                  setOptionsOpen(false);
-                  openLibraryModal();
-                }}
-              >
-                <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                </svg>
-                <span>Library</span>
               </button>
 
               <div className="menu-divider" role="separator"></div>
