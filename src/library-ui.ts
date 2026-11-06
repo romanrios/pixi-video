@@ -3,7 +3,7 @@ import { getCurrentUser } from "./auth-ui";
 import { showToast, showConfirmDialog } from "./toast";
 import type { Preset } from "@/types/preset";
 
-const CACHE_KEY = "pixi_presets_cache_v1";
+const CACHE_KEY = "pixi_presets_cache_v2";
 
 function getCachedPresets(): Preset[] {
   if (typeof window === "undefined") return [];
