@@ -95,7 +95,11 @@ export async function POST(request: NextRequest) {
     // Subir thumbnail a Cloudinary si se proporcionó una captura en base64
     let thumbnailUrl: string | null = null;
     if (thumbnail && typeof thumbnail === "string") {
-      thumbnailUrl = await uploadThumbnailToCloudinary(thumbnail, id);
+      try {
+        thumbnailUrl = await uploadThumbnailToCloudinary(thumbnail, id);
+      } catch (cErr) {
+        console.warn("[Cloudinary] Non-fatal error uploading thumbnail:", cErr);
+      }
     }
 
     await db.execute({

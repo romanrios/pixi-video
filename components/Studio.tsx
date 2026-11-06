@@ -1068,7 +1068,10 @@ export default function Studio() {
     };
     handleSaveAsProjectRef.current = handleSaveAsProject;
 
+    let isSavingProject = false;
     const handleSaveProject = async () => {
+      if (isSavingProject) return;
+
       const user = getCurrentUser();
       if (!user) {
         alert("You must sign in with Google to save presets.");
@@ -1081,6 +1084,7 @@ export default function Studio() {
 
       if (isOwnProject && currentPresetId) {
         try {
+          isSavingProject = true;
           logMessage(`Saving changes to "${currentPresetTitle}"...`, "info");
           const code = editorInstanceRef.current ? editorInstanceRef.current.getValue() : "";
           const thumbnail = await captureSceneThumbnail();
@@ -1103,6 +1107,8 @@ export default function Studio() {
           console.error("Error saving preset:", err);
           alert(`Error saving preset: ${err.message}`);
           logMessage(`Error saving preset: ${err.message}`, "error");
+        } finally {
+          isSavingProject = false;
         }
       } else {
         handleSaveAsProject();

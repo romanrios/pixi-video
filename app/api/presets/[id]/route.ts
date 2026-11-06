@@ -100,13 +100,17 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     let thumbnailUrl = preset.thumbnail_url ? String(preset.thumbnail_url) : null;
     if (thumbnail && typeof thumbnail === "string" && thumbnail.startsWith("data:image/")) {
-      const uploaded = await uploadThumbnailToCloudinary(thumbnail, id);
-      if (uploaded) {
-        // Si ya existía un thumbnail anterior y es diferente, eliminarlo de Cloudinary para no dejar archivos basura
-        if (preset.thumbnail_url && preset.thumbnail_url !== uploaded) {
-          await deleteThumbnailFromCloudinary(preset.thumbnail_url);
+      try {
+        const uploaded = await uploadThumbnailToCloudinary(thumbnail, id);
+        if (uploaded) {
+          // Si ya existía un thumbnail anterior y es diferente, eliminarlo de Cloudinary para no dejar archivos basura
+          if (preset.thumbnail_url && preset.thumbnail_url !== uploaded) {
+            await deleteThumbnailFromCloudinary(preset.thumbnail_url);
+          }
+          thumbnailUrl = uploaded;
         }
-        thumbnailUrl = uploaded;
+      } catch (cErr) {
+        console.warn("[Cloudinary] Non-fatal error updating thumbnail:", cErr);
       }
     }
 
@@ -172,10 +176,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     // Eliminar el thumbnail en Cloudinary evitando archivos basura
-    if (preset.thumbnail_url) {
-      await deleteThumbnailFromCloudinary(preset.thumbnail_url);
+    try {
+      if (preset.thumbnail_url) {
+        await deleteThumbnailFromCloudinary(preset.thumbnail_url);
+      }
+      await deleteThumbnailFromCloudinary(id);
+    } catch (cErr) {
+      console.warn("[Cloudinary] Non-fatal error deleting thumbnail:", cErr);
     }
-    await deleteThumbnailFromCloudinary(id);
 
     await db.execute({
       sql: "DELETE FROM presets WHERE id = ?",

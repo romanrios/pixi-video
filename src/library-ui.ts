@@ -358,6 +358,9 @@ async function openEditPresetModal(preset: Preset): Promise<void> {
   }
 }
 
+let libraryUIInitialized = false;
+let isSubmittingPreset = false;
+
 /**
  * Inicialización de eventos de la biblioteca y modal de presets.
  */
@@ -376,6 +379,12 @@ export function initLibraryUI({
   onSavePresetSuccessCallback = onSavePresetSuccess || null;
   getEditorCodeCallback = getEditorCode || null;
   getCanvasThumbnailCallback = getCanvasThumbnail || null;
+
+  if (libraryUIInitialized) {
+    loadLibraryPresets();
+    return;
+  }
+  libraryUIInitialized = true;
 
   const libraryModal = document.getElementById("library-modal") as HTMLDialogElement | null;
   const btnCloseLibrary = document.getElementById("btn-close-library");
@@ -436,6 +445,7 @@ export function initLibraryUI({
   // Envío del formulario de crear / editar preset
   presetEditorForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (isSubmittingPreset) return;
 
     const title = presetTitleInput?.value.trim() || "";
     const description = presetDescInput?.value.trim() || "";
@@ -449,6 +459,8 @@ export function initLibraryUI({
       alert("Please enter a title for the preset.");
       return;
     }
+
+    isSubmittingPreset = true;
 
     try {
       if (btnSubmitPresetEditor) {
@@ -490,6 +502,7 @@ export function initLibraryUI({
       console.error(err);
       alert(`Error saving preset: ${err.message}`);
     } finally {
+      isSubmittingPreset = false;
       if (btnSubmitPresetEditor) {
         btnSubmitPresetEditor.disabled = false;
         const span = btnSubmitPresetEditor.querySelector("span");
