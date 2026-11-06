@@ -1,8 +1,30 @@
 import { fetchPresets, createPreset, updatePreset, deletePreset } from "./api";
 import { getCurrentUser } from "./auth-ui";
+import { showToast, showConfirmDialog } from "./toast";
 import type { Preset } from "@/types/preset";
 
-let allPresets: Preset[] = [];
+const CACHE_KEY = "pixi_presets_cache_v1";
+
+function getCachedPresets(): Preset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function setCachedPresets(presets: Preset[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(presets));
+  } catch {}
+}
+
+let allPresets: Preset[] = getCachedPresets();
 let currentFilter: "all" | "mine" = "all";
 let searchQuery = "";
 let onSelectPresetCallback: ((preset: Preset) => void) | null = null;
@@ -220,41 +242,98 @@ function renderPresets(): void {
       const found = allPresets.find((p) => p.id === id);
       if (!found) return;
 
-      const confirmDelete = window.confirm(
-        `Are you sure you want to delete preset "${found.title}" from the library? This action cannot be undone.`
-      );
-      if (!confirmDelete) return;
+      const confirmed = await showConfirmDialog({
+        title: "Delete Preset",
+        message: `Are you sure you want to delete preset "${found.title}" from the library? This action cannot be undone.`,
+        confirmText: "Delete",
+        isDanger: true,
+      });
+      if (!confirmed) return;
+
+      // Optimistic removal from in-memory and session cache for instant feedback
+      const prevPresets = [...allPresets];
+      allPresets = allPresets.filter((p) => p.id !== found.id);
+      setCachedPresets(allPresets);
+      renderPresets();
 
       try {
         await deletePreset(found.id);
-        await loadLibraryPresets();
+        showToast(`Preset "${found.title}" deleted from library`, "info");
       } catch (err: any) {
-        alert(`Error deleting preset: ${err.message}`);
+        console.error("Error deleting preset:", err);
+        showToast(`Error deleting preset: ${err.message}`, "error");
+        // Revert on error
+        allPresets = prevPresets;
+        setCachedPresets(allPresets);
+        renderPresets();
       }
     });
   });
 }
 
 /**
- * Carga los presets desde la API del backend.
+ * Renderiza tarjetas skeleton animadas para dar feedback visual instantáneo.
  */
-export async function loadLibraryPresets(): Promise<void> {
+function renderSkeletons(): void {
+  const presetsGrid = document.getElementById("presets-grid");
+  const libraryCountBadge = document.getElementById("library-count-badge");
+  if (!presetsGrid) return;
+  if (libraryCountBadge) libraryCountBadge.textContent = "Loading...";
+
+  presetsGrid.innerHTML = Array.from({ length: 6 })
+    .map(
+      () => `
+      <div class="preset-card skeleton-card" aria-hidden="true">
+        <div class="skeleton-media shimmer"></div>
+        <div class="preset-card-body">
+          <div class="skeleton-line title shimmer"></div>
+          <div class="skeleton-line desc shimmer"></div>
+        </div>
+        <div class="preset-card-footer">
+          <div class="skeleton-avatar shimmer"></div>
+          <div class="skeleton-btn shimmer"></div>
+        </div>
+      </div>
+    `
+    )
+    .join("");
+}
+
+/**
+ * Carga los presets desde la API del backend y actualiza la caché local.
+ */
+export async function loadLibraryPresets(options?: { silent?: boolean }): Promise<void> {
   try {
-    allPresets = await fetchPresets();
+    const presets = await fetchPresets(!options?.silent);
+    allPresets = presets;
+    setCachedPresets(allPresets);
     renderPresets();
-  } catch (err) {
+  } catch (err: any) {
     console.warn("Could not load presets library from API:", err);
+    if (!options?.silent) {
+      showToast(`Could not refresh presets: ${err.message}`, "error");
+    }
   }
 }
 
 /**
- * Abre el modal de la biblioteca.
+ * Abre el modal de la biblioteca de forma instantánea sin bloqueos de red.
  */
 export async function openLibraryModal(): Promise<void> {
   const libraryModal = document.getElementById("library-modal") as HTMLDialogElement | null;
-  await loadLibraryPresets();
-  if (libraryModal) {
-    libraryModal.showModal();
+  if (!libraryModal) return;
+
+  // 1. Abrir inmediatamente el diálogo (0ms de latencia percibida)
+  libraryModal.showModal();
+
+  // 2. Si ya existen presets en memoria o sesión, mostrarlos al instante y revalidar en segundo plano
+  if (allPresets.length > 0) {
+    renderPresets();
+    loadLibraryPresets({ silent: true });
+  } else {
+    // Si es la primera carga absoluta, mostrar skeletons mientras viaja la petición
+    renderSkeletons();
+    await loadLibraryPresets();
   }
 }
 
@@ -268,13 +347,13 @@ export async function openCreatePresetModal(options?: {
 }): Promise<void> {
   const user = getCurrentUser();
   if (!user) {
-    alert("You must sign in with Google to save presets.");
+    showToast("You must sign in with Google to save presets.", "warning");
     return;
   }
 
   const code = getEditorCodeCallback ? getEditorCodeCallback() : "";
   if (!code || !code.trim()) {
-    alert("The code editor is empty.");
+    showToast("The code editor is empty.", "warning");
     return;
   }
 
@@ -433,7 +512,7 @@ export function initLibraryUI({
   filterMineBtn?.addEventListener("click", () => {
     const user = getCurrentUser();
     if (!user) {
-      alert("Sign in with Google to view your saved presets.");
+      showToast("Sign in with Google to view your saved presets.", "warning");
       return;
     }
     currentFilter = "mine";
@@ -456,7 +535,7 @@ export function initLibraryUI({
       : "";
 
     if (!title) {
-      alert("Please enter a title for the preset.");
+      showToast("Please enter a title for the preset.", "warning");
       return;
     }
 
@@ -494,13 +573,14 @@ export function initLibraryUI({
       }
 
       presetEditorModal?.close();
+      showToast(editingPresetId ? "Preset updated successfully!" : "Preset published to library!", "success");
       await loadLibraryPresets();
       if (openedFromLibraryModal) {
         libraryModal?.showModal();
       }
     } catch (err: any) {
       console.error(err);
-      alert(`Error saving preset: ${err.message}`);
+      showToast(`Error saving preset: ${err.message}`, "error");
     } finally {
       isSubmittingPreset = false;
       if (btnSubmitPresetEditor) {

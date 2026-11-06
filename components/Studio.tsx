@@ -10,6 +10,7 @@ import { initAuth, getCurrentUser } from "../src/auth-ui";
 import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/library-ui";
 import { updatePreset } from "../src/api";
 import { configureMonaco, transpileTypeScript } from "../src/monaco-pixi";
+import { showToast } from "../src/toast";
 
 export default function Studio() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -695,7 +696,7 @@ export default function Studio() {
           logMessage("Recording cancelled by user.", "warn");
         } else {
           console.error(err);
-          alert(`Error exporting video: ${err.message}`);
+          showToast(`Export error: ${err.message}`, "error");
           logMessage(`Export error: ${err.message}`, "error");
         }
         if (progressModal) progressModal.close();
@@ -1050,7 +1051,7 @@ export default function Studio() {
     const handleSaveAsProject = () => {
       const user = getCurrentUser();
       if (!user) {
-        alert("You must sign in with Google to save presets.");
+        showToast("You must sign in with Google to save presets.", "warning");
         return;
       }
 
@@ -1074,7 +1075,7 @@ export default function Studio() {
 
       const user = getCurrentUser();
       if (!user) {
-        alert("You must sign in with Google to save presets.");
+        showToast("You must sign in with Google to save presets.", "warning");
         return;
       }
 
@@ -1097,6 +1098,7 @@ export default function Studio() {
           });
 
           logMessage(`Project "${currentPresetTitle}" saved successfully.`, "info");
+          showToast(`Project "${currentPresetTitle}" saved successfully.`, "success");
 
           const badge = document.getElementById("active-preset-badge");
           if (badge) {
@@ -1105,7 +1107,7 @@ export default function Studio() {
           }
         } catch (err: any) {
           console.error("Error saving preset:", err);
-          alert(`Error saving preset: ${err.message}`);
+          showToast(`Error saving preset: ${err.message}`, "error");
           logMessage(`Error saving preset: ${err.message}`, "error");
         } finally {
           isSavingProject = false;
@@ -1136,6 +1138,7 @@ export default function Studio() {
             badge.textContent = preset.title;
           }
           logMessage(`Preset "${preset.title}" loaded from library.`, "info");
+          showToast(`Loaded "${preset.title}" into editor`, "info");
           if (window.innerWidth < 768) {
             changeViewMode("preview");
           }
@@ -1155,6 +1158,7 @@ export default function Studio() {
           setTimeout(() => badge.classList.remove("saved-flash"), 1200);
         }
         logMessage(`Preset "${saved.title}" saved successfully.`, "info");
+        showToast(`Preset "${saved.title}" saved successfully!`, "success");
       },
       getEditorCode: () => (editorInstanceRef.current ? editorInstanceRef.current.getValue() : ""),
       getCanvasThumbnail: captureSceneThumbnail,
@@ -2031,6 +2035,34 @@ export default function Studio() {
           </div>
         </div>
       </dialog>
+
+      {/* Modal de Confirmación Moderno */}
+      <dialog id="confirm-modal" className="modal-dialog confirm-dialog" closedby="any" aria-labelledby="confirm-modal-title">
+        <div className="confirm-modal-body">
+          <div id="confirm-modal-icon" className="confirm-modal-icon danger">
+            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <div className="confirm-modal-content">
+            <h3 id="confirm-modal-title" className="confirm-modal-title">Confirm Action</h3>
+            <p id="confirm-modal-message" className="confirm-modal-message">Are you sure you want to proceed?</p>
+          </div>
+        </div>
+        <div className="modal-footer confirm-modal-footer">
+          <button type="button" id="btn-cancel-confirm" className="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="button" id="btn-action-confirm" className="btn btn-danger">
+            Confirm
+          </button>
+        </div>
+      </dialog>
+
+      {/* Contenedor de Notificaciones Toast */}
+      <div id="toast-container" className="toast-container" aria-live="polite" aria-atomic="true"></div>
     </div>
   );
 }

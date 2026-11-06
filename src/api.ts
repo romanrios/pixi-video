@@ -65,13 +65,33 @@ export async function logoutUser(): Promise<{ success: boolean; message: string 
   return await parseResponse(res, "Error logging out.");
 }
 
-export async function fetchPresets(): Promise<Preset[]> {
-  const res = await fetch("/api/presets");
-  const data = await parseResponse(res, "Failed to load presets.");
-  return data.presets || [];
+let presetsPromise: Promise<Preset[]> | null = null;
+
+export function invalidatePresetsCache(): void {
+  presetsPromise = null;
+}
+
+export async function fetchPresets(forceRefresh = false): Promise<Preset[]> {
+  if (presetsPromise && !forceRefresh) {
+    return presetsPromise;
+  }
+  presetsPromise = (async () => {
+    try {
+      const res = await fetch("/api/presets");
+      const data = await parseResponse(res, "Failed to load presets.");
+      return data.presets || [];
+    } finally {
+      // Permitir revalidación después de 15 segundos
+      setTimeout(() => {
+        presetsPromise = null;
+      }, 15000);
+    }
+  })();
+  return presetsPromise;
 }
 
 export async function createPreset({ title, description, code, thumbnail }: PresetCreateInput): Promise<any> {
+  invalidatePresetsCache();
   const res = await fetch("/api/presets", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -81,6 +101,7 @@ export async function createPreset({ title, description, code, thumbnail }: Pres
 }
 
 export async function updatePreset(id: string, { title, description, code, thumbnail }: PresetUpdateInput): Promise<any> {
+  invalidatePresetsCache();
   const res = await fetch(`/api/presets/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -90,6 +111,7 @@ export async function updatePreset(id: string, { title, description, code, thumb
 }
 
 export async function deletePreset(id: string): Promise<any> {
+  invalidatePresetsCache();
   const res = await fetch(`/api/presets/${id}`, {
     method: "DELETE",
   });

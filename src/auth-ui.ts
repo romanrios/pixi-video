@@ -1,5 +1,6 @@
 /// <reference path="../types/global.d.ts" />
 import { fetchAuthConfig, fetchCurrentUser, loginWithGoogleCredential, logoutUser } from "./api";
+import { showToast } from "./toast";
 import type { User } from "@/types/auth";
 
 let currentUser: User | null = null;
@@ -66,8 +67,10 @@ function renderNavbarAuth() {
         currentUser = null;
         renderNavbarAuth();
         notifyListeners();
-      } catch (err) {
+        showToast("Signed out successfully", "info");
+      } catch (err: any) {
         console.error("Error signing out:", err);
+        showToast(`Error signing out: ${err.message}`, "error");
       }
     });
   } else {
@@ -142,9 +145,10 @@ async function handleGoogleCredentialResponse(response: any) {
     currentUser = data.user;
     renderNavbarAuth();
     notifyListeners();
+    showToast(`Welcome, ${currentUser.name}!`, "success");
   } catch (err: any) {
     console.error("Error signing in with Google:", err);
-    alert(`Google authentication error: ${err.message}`);
+    showToast(`Google authentication error: ${err.message}`, "error");
   }
 }
 

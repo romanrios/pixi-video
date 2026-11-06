@@ -2238,3 +2238,279 @@ dialog.about-dialog {
     height: 24px;
   }
 }
+
+/* ============================================================
+   Toast Notifications & Confirm Dialog
+   ============================================================ */
+
+.toast-container {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 380px;
+  width: calc(100% - 40px);
+}
+
+.toast-item {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 0, 0, 0.3);
+  color: #f1f5f9;
+  font-size: 0.85rem;
+  animation: toast-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.toast-item.toast-leaving {
+  animation: toast-exit 0.2s ease forwards;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+.toast-item.toast-success {
+  border-left: 3px solid #22c55e;
+}
+.toast-item.toast-success .toast-icon-wrap {
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.toast-item.toast-error {
+  border-left: 3px solid #ef4444;
+}
+.toast-item.toast-error .toast-icon-wrap {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.toast-item.toast-warning {
+  border-left: 3px solid #f59e0b;
+}
+.toast-item.toast-warning .toast-icon-wrap {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.toast-item.toast-info {
+  border-left: 3px solid #6366f1;
+}
+.toast-item.toast-info .toast-icon-wrap {
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.toast-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.toast-body {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.toast-message {
+  word-break: break-word;
+  font-weight: 500;
+}
+
+.toast-close-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.toast-close-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Confirm Dialog */
+dialog.confirm-dialog {
+  max-width: 440px;
+  width: calc(100% - 32px);
+  padding: 22px 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0f172a;
+}
+
+.confirm-modal-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.confirm-modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.confirm-modal-icon.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.confirm-modal-icon.info {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.confirm-modal-content {
+  flex: 1;
+}
+
+.confirm-modal-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0 0 6px 0;
+}
+
+.confirm-modal-message {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.confirm-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #ef4444;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+  border-color: #f87171;
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
+}
+
+/* Skeletons shimmer for library */
+.preset-card.skeleton-card {
+  pointer-events: none;
+  user-select: none;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-media {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.skeleton-line.title {
+  width: 65%;
+  height: 14px;
+}
+
+.skeleton-line.desc {
+  width: 88%;
+}
+
+.skeleton-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.skeleton-btn {
+  width: 52px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+@media (max-width: 768px) {
+  .toast-container {
+    top: 54px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+  }
+}
