@@ -37,7 +37,8 @@ textarea {
   border-bottom: 1px solid #1e293b;
   flex-wrap: wrap;
   gap: 12px;
-  z-index: 10;
+  position: relative;
+  z-index: 100;
 }
 
 .brand {
