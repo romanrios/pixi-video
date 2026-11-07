@@ -3,14 +3,41 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import * as PIXI from "pixi.js";
 import Editor from "@monaco-editor/react";
-import { EXAMPLES } from "../src/examples";
 import { exportDeterministicVideo, downloadBlob, isWebCodecsSupported } from "../src/recorder";
 import type { VideoQuality } from "@/types/recorder";
 import { initAuth, getCurrentUser } from "../src/auth-ui";
 import { initLibraryUI, openLibraryModal, openCreatePresetModal } from "../src/library-ui";
-import { updatePreset } from "../src/api";
+import { updatePreset, fetchPresets } from "../src/api";
 import { configureMonaco, transpileTypeScript } from "../src/monaco-pixi";
 import { showToast } from "../src/toast";
+
+const DEFAULT_STUDIO_CODE = `import { Application, Graphics } from 'pixi.js';
+
+// ==========================================
+// PixiJS v8 Creative Studio
+// ==========================================
+// 🎛️ CONFIGURATION & EXPERIMENTATION:
+const BG_COLOR = '#080c14';
+const STAR_COLOR = 0x6366f1;
+const ROTATION_SPEED = 0.02;
+
+(async () => {
+  // Create and initialize PixiJS v8 Application
+  const app = new Application();
+  await app.init({ background: BG_COLOR, resizeTo: window });
+  document.body.appendChild(app.canvas);
+
+  const star = new Graphics();
+  star.star(app.screen.width / 2, app.screen.height / 2, 5, 80, 40)
+      .fill({ color: STAR_COLOR })
+      .stroke({ width: 3, color: 0xa5b4fc });
+  app.stage.addChild(star);
+
+  app.ticker.add((time) => {
+    star.rotation += ROTATION_SPEED * time.deltaTime;
+  });
+})();
+`;
 
 export default function Studio() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -183,7 +210,7 @@ export default function Studio() {
     let currentHeight = 720;
     let previousResValue = "720x720";
     let currentPresetId: string | null = null;
-    let currentPresetTitle = "Basic Shapes";
+    let currentPresetTitle = "Untitled Project";
     let currentPresetDesc = "";
     let currentPresetUserId: string | null = null;
     let abortController = null;
@@ -1152,7 +1179,7 @@ export default function Studio() {
 
       const defaultTitle = currentPresetId
         ? `${currentPresetTitle} (Copy)`
-        : currentPresetTitle && currentPresetTitle !== "Basic Shapes"
+        : currentPresetTitle && currentPresetTitle !== "Untitled Project"
         ? currentPresetTitle
         : "My Preset";
 
@@ -1265,6 +1292,35 @@ export default function Studio() {
     if (editorInstanceRef.current) {
       runUserCode();
     }
+
+    // Cargar automáticamente el primer preset dinámico de Turso en el editor si no hay proyecto activo
+    fetchPresets()
+      .then((presets) => {
+        if (presets && presets.length > 0 && !currentPresetId) {
+          const firstPreset = presets[0];
+          const activeEditor = editorInstanceRef.current;
+          if (
+            activeEditor &&
+            (activeEditor.getValue() === DEFAULT_STUDIO_CODE || !activeEditor.getValue().trim())
+          ) {
+            currentPresetId = firstPreset.id;
+            currentPresetTitle = firstPreset.title;
+            currentPresetDesc = firstPreset.description || "";
+            currentPresetUserId = firstPreset.userId || null;
+            activeEditor.setValue(firstPreset.code);
+            runUserCode();
+            updateExportSummary();
+            const badge = document.getElementById("active-preset-badge");
+            if (badge) {
+              badge.textContent = firstPreset.title;
+              badge.classList.add("visible");
+            }
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not fetch initial presets from Turso:", err);
+      });
 
     const onWindowResize = () => {
       const playgroundBody = document.getElementById("playground-body");
@@ -1581,7 +1637,7 @@ export default function Studio() {
                 </svg>
               </button>
               <span id="active-preset-badge" className="active-preset-badge">
-                Basic Shapes
+                Creative Scene
               </span>
             </div>
             <div className="pane-header-actions">
@@ -1616,7 +1672,7 @@ export default function Studio() {
               defaultLanguage="typescript"
               language="typescript"
               theme="vs-dark"
-              defaultValue={EXAMPLES["basic-shapes"] || EXAMPLES["flow-field"] || ""}
+              defaultValue={DEFAULT_STUDIO_CODE}
               onMount={handleEditorDidMount}
               options={{
                 fontSize: 13.5,

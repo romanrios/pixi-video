@@ -1,5 +1,4 @@
 import { createClient, type Client } from "@libsql/client";
-import { PRESETS_DATA } from "./presets-data";
 
 const globalForDb = globalThis as unknown as {
   tursoClient?: Client;
@@ -34,7 +33,7 @@ export async function ensureDbInitialized() {
       );
     `);
 
-    // 2. Tabla de presets comunitarios
+    // 2. Tabla de presets comunitarios (totalmente dinámicos)
     await db.execute(`
       CREATE TABLE IF NOT EXISTS presets (
         id TEXT PRIMARY KEY,
@@ -87,43 +86,8 @@ export async function ensureDbInitialized() {
       });
     }
 
-    // 4. Sembrar o sincronizar presets iniciales
-    for (const seed of PRESETS_DATA) {
-      const existing = await db.execute({
-        sql: "SELECT id FROM presets WHERE id = ?",
-        args: [seed.id],
-      });
-
-      if (existing.rows.length === 0) {
-        await db.execute({
-          sql: `
-            INSERT INTO presets (id, title, description, code, user_id, user_name, user_email, user_picture, thumbnail_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `,
-          args: [
-            seed.id,
-            seed.title,
-            seed.description,
-            seed.code,
-            "admin-seed-id",
-            "Román Ríos",
-            adminEmail,
-            "https://lh3.googleusercontent.com/a/ACg8ocKclIU5Jcpd1-5eNQMC_N9QHfFaxHFe60qCnwRF78-y1SmgFyDbmg=s96-c",
-            seed.thumbnailUrl || null,
-          ],
-        });
-      } else {
-        // Mantener actualizados los presets del sistema
-        await db.execute({
-          sql: "UPDATE presets SET title = ?, description = ?, code = ? WHERE id = ? AND user_id = 'admin-seed-id'",
-          args: [seed.title, seed.description, seed.code, seed.id],
-        });
-      }
-    }
-
     isInitialized = true;
   } catch (err) {
     console.error("Error al inicializar base de datos Turso en Next.js:", err);
   }
 }
-
